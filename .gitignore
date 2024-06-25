@@ -1,0 +1,21 @@
+# OS Junk
+._*
+.DS_Store
+Thumbs.db
+
+#Python Ignore
+__pycache__/
+.pytest_caches
+
+# Python VENV
+.venv
+
+# IDE
+.idea/
+
+# LOGS
+logs/*.csv
+
+# PROPRIETARY CLASSES
+classes/*
+!classes/README.md
