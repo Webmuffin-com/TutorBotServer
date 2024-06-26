@@ -234,9 +234,9 @@ async def load_conundrum_file(class_directory: str, file_name: str, request: Req
         raise HTTPException(status_code=500, detail="Error loading conundrum file or action plan")
 
 if __name__ == '__main__':
+    print('running TutorBot_Server')
+
     uvicorn.run(
-        'TutorBot_Server:app', host='0.0.0.0', port=8000,
-        ssl_keyfile="localhost.key",
-        ssl_certfile="localhost.crt"
+        'TutorBot_Server:app', host='0.0.0.0', port=8000
     )
 
