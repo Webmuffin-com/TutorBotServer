@@ -569,15 +569,17 @@ def temp_html_v5():
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <!-- Version 1.0.5 -->
+    <!-- Main container for the application -->
     <div class="container">
+        <!-- Header section with title and instructions -->
         <div class="header">
             <h1>Project Management Learning Center</h1>
             <p>Select your class from the dropdown below and then select the lesson you would like to work on.</p>
             <br>
+            <!-- Dropdowns for selecting class and lesson -->
             <div>
                 <label for="classDropdown">Class:</label>
-                <select id="classDropdown" onchange="fetchLessons()">
+                <select id="classDropdown">
                     <option value="">Select a class</option>
                 </select>
 
@@ -585,52 +587,58 @@ def temp_html_v5():
                 <select id="lessonDropdown">
                     <option value="">Select a lesson</option>
                 </select>
+                <!-- Display the current loaded lesson -->
+                <p id="lessonNameDisplay">No lesson loaded</p>
             </div>
         </div>
         <br>
         <br>
+        <!-- Chat area for interaction -->
         <div class="chat-area">
             <label for="responseOutput">Response:</label>
             <div id="responseOutput" class="response-output"></div>
 
             <label for="userInput">Request:</label>
             <div class="input-container">
+                <!-- Loading indicator -->
                 <div id="thinkingIndicator" class="loader" style="display: none;"></div>
                 <textarea id="userInput" class="user-input"></textarea>
             </div>
+            <!-- Send button for submitting requests -->
             <button id="sendButton">Send</button>
         </div>
     </div>
 
+    <!-- Scripts for dynamic behavior and data fetching -->
     <script>
         const baseURL = window.location.origin;
+        let selectedClassId = null;  // Track selected class ID for requests
+        const classDropdown = document.getElementById('classDropdown'); // Globally accessible dropdown element
 
+        // Set a cookie on the client for session management
         async function setCookie() {
             const response = await fetch(`${baseURL}/set-cookie/`, {
                 method: 'GET',
-                credentials: 'include'  // Include credentials (cookies) with the request
+                credentials: 'include'
             });
             const data = await response.json();
-            console.log(data.message);  // For debugging
+            console.log(data.message);
         }
 
+        // Fetch class options from server
         async function fetchClasses() {
             const response = await fetch(`${baseURL}/classes/`, {
                 method: 'GET',
-                credentials: 'include'  // Include credentials (cookies) with the request
+                credentials: 'include'
             });
 
             if (response.ok) {
                 const data = await response.json();
-                const classDropdown = document.getElementById('classDropdown');
-
-                // Clear existing options
                 classDropdown.innerHTML = '<option value="">Select a class</option>';
-
                 data.directories.forEach(classItem => {
                     const option = document.createElement('option');
-                    option.value = classItem; // Use the directory name as the value
-                    option.textContent = classItem; // Use the directory name as the text
+                    option.value = classItem;
+                    option.textContent = classItem;
                     classDropdown.appendChild(option);
                 });
             } else {
@@ -638,25 +646,23 @@ def temp_html_v5():
             }
         }
 
+        // Fetch lessons based on selected class
         async function fetchLessons() {
-            const classDropdown = document.getElementById('classDropdown');
-            const selectedClassId = classDropdown.value;
-        
             const lessonDropdown = document.getElementById('lessonDropdown');
-            lessonDropdown.innerHTML = '<option value="">Select a lesson</option>';  // Reset lesson dropdown
+            lessonDropdown.innerHTML = '<option value="">Select a lesson</option>';
         
             if (selectedClassId) {
                 const response = await fetch(`${baseURL}/classes/${selectedClassId}/conundrums/`, {
                     method: 'GET',
-                    credentials: 'include'  // Include credentials (cookies) with the request
+                    credentials: 'include'
                 });
         
                 if (response.ok) {
                     const data = await response.json();
-                    data.files.forEach(lesson => {  // Use data.files to get the list of files
+                    data.files.forEach(lesson => {
                         const option = document.createElement('option');
-                        option.value = lesson;  // Use the file name as the value
-                        option.textContent = lesson;  // Use the file name as the text
+                        option.value = lesson;
+                        option.textContent = lesson;
                         lessonDropdown.appendChild(option);
                     });
                 } else {
@@ -665,59 +671,51 @@ def temp_html_v5():
             }
         }
 
-
-        // Call the setCookie and fetchClasses functions on page load
-        window.onload = () => {
+        // Initial setup on page load
+        document.addEventListener('DOMContentLoaded', () => {
             setCookie();
             fetchClasses();
-        };
+        });
 
+        // Handling message sending from chat interface
         async function sendMessage() {
             const userInputElement = document.getElementById('userInput');
             const userInput = userInputElement.value;
             const responseOutput = document.getElementById('responseOutput');
             const thinkingIndicator = document.getElementById('thinkingIndicator');
 
-            // Show the thinking indicator
             thinkingIndicator.style.display = 'block';
 
             const response = await fetch(`${baseURL}/chatbot/`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ text: userInput }),
-                credentials: 'include'  // Include credentials (cookies) with the request
+                credentials: 'include'
             });
 
-            // Hide the thinking indicator
             thinkingIndicator.style.display = 'none';
 
             if (response.ok) {
                 const data = await response.json();
                 const newResponse = data.text;
-                // Convert URLs to clickable links
                 const formattedUserInput = formatLinks(userInput);
                 const formattedResponse = formatLinks(newResponse);
                 const timestamp = new Date().toLocaleTimeString();
 
-                // Append new response to existing content
                 const userMessage = `<div class="user-message"><span class="message-text">User: ${formattedUserInput}</span><span class="timestamp">${timestamp}</span></div>`;
-                const botMessage = `<div class="bot-message"><span class="message-text">Bot: ${formattedResponse}</span><span class="timestamp">${timestamp}</span></div>`;
+                const botMessage = `<div class="bot-message"><span class="message-text">Bot: ${formattedResponse}</span><span the_timestamp="${timestamp}"></span></div>`;
                 responseOutput.innerHTML += userMessage + botMessage;
-                responseOutput.scrollTop = responseOutput.scrollHeight; // Scroll to the latest message
+                responseOutput.scrollTop = responseOutput.scrollHeight;
 
-                // Clear the input field
                 userInputElement.value = '';
-                userInputElement.style.height = 'auto'; // Reset height after sending
-
-                // Scroll to make the input box visible
+                userInputElement.style.height = 'auto';
                 userInputElement.scrollIntoView({ behavior: 'smooth' });
             } else {
                 console.error("Error:", response.status, response.statusText);
             }
         }
 
+        // Additional event listeners for UI interactions
         document.getElementById('sendButton').addEventListener('click', sendMessage);
         document.getElementById('userInput').addEventListener('keypress', function(event) {
             if (event.key === 'Enter' && !event.shiftKey) {
@@ -731,10 +729,46 @@ def temp_html_v5():
             this.style.height = (this.scrollHeight) + 'px';
         });
 
+        // Utility function to format links within text
         function formatLinks(text) {
             const urlPattern = /(https?:\/\/[^\s]+)/g;
             return text.replace(urlPattern, '<a href="$1" target="_blank">$1</a>');
         }
+
+        // Event listener for class selection to manage class ID and load lessons
+        document.getElementById('classDropdown').addEventListener('change', function() {
+            if (!this.value) {
+                console.warn('No class selected. Please select a class.');
+                return; // Avoid executing fetchLessons if no class is selected
+            }
+            console.log('Class Selected');
+            selectedClassId = this.value; // Update global variable upon change
+            fetchLessons(); // Then fetch lessons based on the new class ID
+        });
+        
+        document.getElementById('lessonDropdown').addEventListener('change', async function() {
+            console.log('Lesson dropdown changed'); // Check if this log appears in the console
+            const selectedLesson = this.value;
+            const currentLessonName = document.getElementById('currentLessonName');
+        
+            if (selectedLesson) {
+                const response = await fetch(`${baseURL}/classes/${selectedClassId}/conundrums/${selectedLesson}`, {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+        
+                if (response.ok) {
+                    const lessonContent = await response.text();
+                    sessionStorage.setItem('currentLesson', lessonContent);
+                    lessonNameDisplay.textContent = 'Loaded Lesson: ' + selectedLesson;
+                } else {
+                    console.error("Error fetching lesson content:", response.status, response.statusText);
+                    lessonNameDisplay.textContent = 'Failed to load lesson';
+                }
+            } else {
+                currentLessonName.textContent = 'No lesson selected';
+            }
+        });
 
     </script>
 </body>

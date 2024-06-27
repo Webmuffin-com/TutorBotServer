@@ -10,7 +10,7 @@ import uvicorn
 
 from LLM_Handler import invoke_llm
 from SessionCache import SessionCacheManager
-from Temp_html import temp_html_v3, temp_html_v4
+from Temp_html import temp_html_v3, temp_html_v5
 import logging
 from Utilities import setup_csv_logging
 
@@ -130,7 +130,7 @@ async def chatbot_endpoint(request: Request, message: PyMessage) -> JSONResponse
 # Define a welcome endpoint
 @app.get("/", response_class=HTMLResponse)
 async def welcome(request: Request):
-    result = temp_html_v4()
+    result = temp_html_v5()
 
     logging.warning (f"Loaded new client web page")
     return HTMLResponse(content=result)
@@ -140,7 +140,10 @@ def delete_session(session_key: str, manager: SessionCacheManager = Depends(get_
     manager.remove_session(session_key)
     return {"message": "Session deleted"}
 
-CLASSES_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'classes'))
+# Define the path to the 'classes' directory within the current working directory
+current_working_directory = os.getcwd()
+CLASSES_DIR = os.path.join(current_working_directory, 'classes')
+CLASSES_DIR = os.path.normpath(CLASSES_DIR)
 
 @app.get("/classes/")
 async def list_class_directories(request: Request):
@@ -159,6 +162,7 @@ async def list_class_directories(request: Request):
 @app.get("/classes/{class_directory}/conundrums/")
 async def list_conundrums(class_directory: str, request: Request):
     directory_path = os.path.join(CLASSES_DIR, class_directory, 'conundrums')
+    directory_path = os.path.normpath(directory_path)
 
     sessionKey = request.cookies.get("session_key")
     try:
@@ -172,22 +176,25 @@ async def list_conundrums(class_directory: str, request: Request):
 
         txt_files = [f for f in os.listdir(directory_path) if os.path.isfile(os.path.join(directory_path, f)) and f.endswith('.txt')]
 
-        logging.warning (f"Loaded conundrum files for {class_directory} which contained ({txt_files})", extra={'sessionKey': sessionKey})
+        logging.warning(f"Loaded conundrum files for {class_directory} which contained ({txt_files})", extra={'sessionKey': sessionKey})
         return JSONResponse(content={"files": txt_files})
     except Exception as e:
         logging.error(f"Error listing files in directory {class_directory}: {e}", extra={'sessionKey': sessionKey})
         raise HTTPException(status_code=500, detail="Error listing files in directory")
 
-
 @app.get("/classes/{class_directory}/conundrums/{file_name}")
 async def load_conundrum_file(class_directory: str, file_name: str, request: Request):
-    conundrum_file_path   = os.path.join(CLASSES_DIR, class_directory, "conundrums", file_name)
+    conundrum_file_path = os.path.join(CLASSES_DIR, class_directory, "conundrums", file_name)
+    conundrum_file_path = os.path.normpath(conundrum_file_path)
     action_plan_file_path = os.path.join(CLASSES_DIR, class_directory, "action_plan.txt")
-    scenario_file_path    = os.path.join(CLASSES_DIR, class_directory, "scenario.txt")
+    action_plan_file_path = os.path.normpath(action_plan_file_path)
+    scenario_file_path = os.path.join(CLASSES_DIR, class_directory, "scenario.txt")
+    scenario_file_path = os.path.normpath(scenario_file_path)
     personality_file_path = os.path.join(CLASSES_DIR, class_directory, "personality.txt")
+    personality_file_path = os.path.normpath(personality_file_path)
 
-    session_key           = request.cookies.get("session_key")
-    session_cache         = session_manager.get_session(session_key)
+    session_key = request.cookies.get("session_key")
+    session_cache = session_manager.get_session(session_key)
 
     if session_cache is None:
         raise HTTPException(status_code=404, detail="Could not locate Session Key")
@@ -197,14 +204,15 @@ async def load_conundrum_file(class_directory: str, file_name: str, request: Req
         raise HTTPException(status_code=404, detail="Conundrum file not found")
 
     try:
-
         # Load conundrum file
         with open(conundrum_file_path, "r") as conundrum_file:
             conundrum_content = conundrum_file.read()
 
-        if (len(conundrum_content) == 0):
-            logging.warning (f"conundrum file {conundrum_file_path} is empty.", extra={'sessionKey': session_key})
+        if len(conundrum_content) == 0:
+            logging.warning(f"conundrum file {conundrum_file_path} is empty.", extra={'sessionKey': session_key})
             raise HTTPException(status_code=404, detail="Conundrum file was empty")
+
+        session_cache.set_conundrum(conundrum_content)
 
         logging.warning(f"Loaded conundrum file {conundrum_file_path}", extra={'sessionKey': session_key})
 
@@ -214,14 +222,13 @@ async def load_conundrum_file(class_directory: str, file_name: str, request: Req
                 logging.warning(f"also loaded action_plan file {action_plan_file_path}", extra={'sessionKey': session_key})
                 session_cache.set_action_plan(action_plan_file.read())
 
-        # Load action plan file if it exists
+        # Load scenario file if it exists
         if os.path.exists(scenario_file_path):
             with open(scenario_file_path, "r") as scenario_file:
                 logging.warning(f"also loaded scenario file {scenario_file_path}", extra={'sessionKey': session_key})
-
                 session_cache.set_scenario(scenario_file.read())
 
-        # Load action plan file if it exists
+        # Load personality file if it exists
         if os.path.exists(personality_file_path):
             with open(personality_file_path, "r") as personality_file:
                 logging.warning(f"also loaded personality file {personality_file_path}", extra={'sessionKey': session_key})

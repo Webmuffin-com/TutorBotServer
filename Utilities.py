@@ -4,11 +4,12 @@ from datetime import datetime
 import threading
 import json
 
+import json
+from datetime import datetime
 
 class SimpleCounterLLMConversation:
     def __init__(self):
         self.conversation = []
-        self.lock = threading.Lock()
         self.message_id_counter = 1  # Initialize message ID counter
 
     def add_message(self, role, content, participant_id=None):
@@ -18,49 +19,44 @@ class SimpleCounterLLMConversation:
         :param content: The content of the message.
         :param participant_id: An optional identifier for the participant.
         """
-        with self.lock:
-            message = {
-                "id": self.message_id_counter,
-                "timestamp": datetime.now().isoformat(),
-                "role": role,
-                "content": content,
-                "participant_id": participant_id or "default"
-            }
-            self.conversation.append(message)
-            self.message_id_counter += 1  # Increment the counter for the next message
-            # Reset counter if it's too high; adjust this limit as needed
-            if self.message_id_counter > 1e9:
-                self.message_id_counter = 1
+        message = {
+            "id": self.message_id_counter,
+            "timestamp": datetime.now().isoformat(),
+            "role": role,
+            "content": content,
+            "participant_id": participant_id or "default"
+        }
+        self.conversation.append(message)
+        self.message_id_counter += 1  # Increment the counter for the next message
+        # Reset counter if it's too high; adjust this limit as needed
+        if self.message_id_counter > 1e9:
+            self.message_id_counter = 1
 
     def clear(self):
         """
         Clears the conversation and resets the message ID counter.
         """
-        with self.lock:
-            self.conversation.clear()
-            self.message_id_counter = 1  # Reset counter
+        self.conversation.clear()
+        self.message_id_counter = 1  # Reset counter
 
     def to_string(self):
         """
         Converts the conversation to a string in a format suitable for the LLM.
         """
-        with self.lock:
-            return json.dumps({"messages": self.conversation}, indent=2)
+        return json.dumps({"messages": self.conversation}, indent=2)
 
     def to_conversation(self):
         """
         Outputs the conversation in a simplified format, focusing on 'role' and 'content'.
         """
-        with self.lock:
-            return json.dumps([{"role": msg["role"], "content": msg["content"]} for msg in self.conversation], indent=2)
+        return json.dumps([{"role": msg["role"], "content": msg["content"]} for msg in self.conversation], indent=2)
 
     def get_history(self):
         """
         Retrieves the conversation history.
         :return: A copy of the conversation history.
         """
-        with self.lock:
-            return list(self.conversation)
+        return list(self.conversation)
 
     def __str__(self):
         """
@@ -72,10 +68,9 @@ class SimpleCounterLLMConversation:
         """
         Provides a detailed representation of the conversation for debugging.
         """
-        with self.lock:
-            conversation_preview = ', '.join(
-                f"{msg['role']}: {msg['content'][:30]}..." for msg in self.conversation[:5])
-            return f"<SimpleCounterLLMConversation (Last 5 Messages): {conversation_preview}>"
+        conversation_preview = ', '.join(
+            f"{msg['role']}: {msg['content'][:30]}..." for msg in self.conversation[:5])
+        return f"<SimpleCounterLLMConversation (Last 5 Messages): {conversation_preview}>"
 
     def get_all_previous_messages(self):
         """
@@ -83,17 +78,13 @@ class SimpleCounterLLMConversation:
         Returns:
             A list of dictionaries, each containing the role and content of each message in the conversation.
         """
-        with self.lock:  # Ensure thread safety
-            return [{'role': message['role'], 'content': message['content']} for message in self.conversation]
+        return [{'role': message['role'], 'content': message['content']} for message in self.conversation]
 
     def __iter__(self):
         """
-        Returns an iterator over a snapshot of the conversation list, to ensure thread safety
-        during iteration. This does not lock the list for the duration of the iteration,
-        but it prevents exceptions due to concurrent modifications.
+        Returns an iterator over a snapshot of the conversation list.
         """
-        with self.lock:
-            return iter(self.conversation.copy())
+        return iter(self.conversation.copy())
 
     def get_user_questions_as_string(self):
         """
@@ -101,27 +92,25 @@ class SimpleCounterLLMConversation:
         Returns:
             A string containing all user questions separated by a space.
         """
-        with self.lock:  # Ensure thread safety
-            # Filter for messages where the role is 'user' and concatenate the content
-            user_questions = ' '.join(msg['content'] for msg in self.conversation if msg['role'] == 'user')
-            return user_questions
+        # Filter for messages where the role is 'user' and concatenate the content
+        user_questions = ' '.join(msg['content'] for msg in self.conversation if msg['role'] == 'user')
+        return user_questions
 
     def get_last_assistance_response(self):
         """
         Returns the content of the last message in the conversation where the role is 'assistant'.
         Returns None if there are no assistant messages in the conversation.
         """
-        with self.lock:
-            # Iterate backwards through the conversation to find the last 'assistant' message and return only its content
-            for message in reversed(self.conversation):
-                if message['role'] == 'assistant':
-                    return message['content']  # Return only the content of the last assistant message
-            return None  # Return None if no 'assistant' messages are found
+        # Iterate backwards through the conversation to find the last 'assistant' message and return only its content
+        for message in reversed(self.conversation):
+            if message['role'] == 'assistant':
+                return message['content']  # Return only the content of the last assistant message
+        return None  # Return None if no 'assistant' messages are found
 
 
 global_conversation = SimpleCounterLLMConversation()
 
-def generate_log_filename(prefix="./logs/TutorBot_Log", extension="csv"):
+def generate_log_filename(prefix="logs/TutorBot_Log", extension="csv"):
     """
     Generate a unique file name with a timestamp for the log file.
 
@@ -129,10 +118,13 @@ def generate_log_filename(prefix="./logs/TutorBot_Log", extension="csv"):
     :param extension: The file extension. Default is 'csv'.
     :return: A string representing the file name.
     """
-
     now = datetime.now()
     timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
-    return f"{prefix}_{timestamp}.{extension}"
+    log_dir = os.path.join(os.getcwd(), os.path.dirname(prefix))
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+    return os.path.join(log_dir, f"{os.path.basename(prefix)}_{timestamp}.{extension}")
+
 
 '''
     we will prefix logs with the following tags
@@ -148,6 +140,10 @@ class CSVLogFormatter(logging.Formatter):
         super().__init__()
 
     def format(self, record):
+
+        print('--------------')
+        print(record)
+        print('--------------')
         # Format time to separate date and time components
         formatted_date = datetime.fromtimestamp(record.created).strftime('%Y-%m-%d')
         formatted_time = datetime.fromtimestamp(record.created).strftime('%H-%M-%S.%f')[:12]  # Slices the string to keep only milliseconds
@@ -184,6 +180,7 @@ def setup_csv_logging():
     logger.handlers.clear()  # Clear existing handlers
     logger.addHandler(file_handler)  # Add the CSV file handler
     logger.addHandler(console_handler)
+
 
 def format_messages(messages):
     # Start building the formatted message string
