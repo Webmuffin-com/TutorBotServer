@@ -76,18 +76,21 @@ async def check_session_key(request: Request, call_next):
 
 @app.get("/set-cookie/")
 async def set_cookie(response: Response, request: Request, manager: SessionCacheManager = Depends(get_session_manager)):
-    session_key = str(uuid.uuid4())  # Use existing session key if available, otherwise set a default or generate a new one
-    session_data = {"initial": "data"}  # Initial data for the session
-    manager.add_session(session_key, session_data)
-    response.set_cookie(
-        key="session_key",
-        value=session_key,
-        samesite="None",
-        secure=False       # This needs to be set true once we move it to a https server.
-    )
-    logging.warning (f"Cookie ({session_key}) set and session created", extra={'sessionKey': session_key})  # Debug statement
-    return {"message": "Cookie set and session created"}
-
+    try:
+        session_key = str(uuid.uuid4())  # Use existing session key if available, otherwise set a default or generate a new one
+        session_data = {"initial": "data"}  # Initial data for the session
+        manager.add_session(session_key, session_data)
+        response.set_cookie(
+            key="session_key",
+            value=session_key,
+            samesite="None",
+            secure=False       # This needs to be set true once we move it to a https server.
+        )
+        logging.warning (f"Cookie ({session_key}) set and session created", extra={'sessionKey': session_key})  # Debug statement
+        return {"message": "Cookie set and session created"}
+    except Exception as e:
+        logging.error(f"Caught exception in set_cookie {session_key}: {e}")
+        raise HTTPException(status_code=500, detail="Error in set_cookie")
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     return FileResponse("static/favicon.ico")
