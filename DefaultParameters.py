@@ -256,8 +256,8 @@ Now that you know how what to respond with, please us an HTML format:
 <div class="parental-topic"> Parental TOPIC Name </div> 
 <div class="cursor"> CURSOR name </div>
 <ul>
-    <li>First child TOPIC</li>
-    <li>Second child TOPIC</li>
+    <li>First child TOPIC</li><br>
+    <li>Second child TOPIC</li><br>
     ...
 </ul>
 <div class="elaborate"> Information given by PERMISSION from your own knowledge base to further a users question</div>

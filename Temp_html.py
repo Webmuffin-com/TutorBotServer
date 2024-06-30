@@ -611,164 +611,192 @@ def temp_html_v5():
 
     <!-- Scripts for dynamic behavior and data fetching -->
     <script>
-        const baseURL = window.location.origin;
-        let selectedClassId = null;  // Track selected class ID for requests
-        const classDropdown = document.getElementById('classDropdown'); // Globally accessible dropdown element
+// Base URL of the application
+const baseURL = window.location.origin;
+// Variable to track selected class ID for requests
+let selectedClassId = null;
 
-        // Set a cookie on the client for session management
-        async function setCookie() {
-            const response = await fetch(`${baseURL}/set-cookie/`, {
+// Event listener to initialize the application once the DOM is fully loaded
+document.addEventListener('DOMContentLoaded', () => {
+    initializeApp();
+});
+
+// Function to initialize the application
+function initializeApp() {
+    setCookie() // Set a session cookie
+        .then(fetchClasses) // Fetch available classes after setting the cookie
+        .catch(error => console.error('Initialization error:', error)); // Log any initialization errors
+    addEventListeners(); // Add event listeners for user interactions
+}
+
+// Function to set a session cookie
+async function setCookie() {
+    try {
+        const response = await fetch(`${baseURL}/set-cookie/`, {
+            method: 'GET',
+            credentials: 'include' // Include credentials (cookies) in the request
+        });
+        if (!response.ok) throw new Error(`Failed to set cookie: ${response.statusText}`);
+        const data = await response.json();
+        console.log(data.message); // Log the response message
+    } catch (error) {
+        console.error('Error setting cookie:', error); // Log any errors that occur
+    }
+}
+
+// Function to fetch available classes from the server
+async function fetchClasses() {
+    try {
+        const response = await fetch(`${baseURL}/classes/`, {
+            method: 'GET',
+            credentials: 'include'
+        });
+        if (!response.ok) throw new Error(`Failed to fetch classes: ${response.statusText}`);
+        const data = await response.json();
+        populateDropdown('classDropdown', data.directories, 'Select a class'); // Populate the class dropdown with fetched data
+    } catch (error) {
+        console.error('Error fetching classes:', error); // Log any errors that occur
+    }
+}
+
+// Function to fetch lessons based on the selected class
+async function fetchLessons() {
+    try {
+        const lessonDropdown = document.getElementById('lessonDropdown');
+        lessonDropdown.innerHTML = '<option value="">Select a lesson</option>'; // Clear the lesson dropdown
+
+        if (selectedClassId) {
+            const response = await fetch(`${baseURL}/classes/${selectedClassId}/conundrums/`, {
                 method: 'GET',
                 credentials: 'include'
             });
+            if (!response.ok) throw new Error(`Failed to fetch lessons: ${response.statusText}`);
             const data = await response.json();
-            console.log(data.message);
+            populateDropdown('lessonDropdown', data.files, 'Select a lesson'); // Populate the lesson dropdown with fetched data
         }
+    } catch (error) {
+        console.error('Error fetching lessons:', error); // Log any errors that occur
+    }
+}
 
-        // Fetch class options from server
-        async function fetchClasses() {
-            const response = await fetch(`${baseURL}/classes/`, {
-                method: 'GET',
-                credentials: 'include'
-            });
+// Function to populate a dropdown with items
+function populateDropdown(dropdownId, items, defaultOptionText) {
+    const dropdown = document.getElementById(dropdownId);
+    dropdown.innerHTML = `<option value="">${defaultOptionText}</option>`; // Set the default option
+    items.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item;
+        option.textContent = item;
+        dropdown.appendChild(option); // Add each item as an option in the dropdown
+    });
+}
 
-            if (response.ok) {
-                const data = await response.json();
-                classDropdown.innerHTML = '<option value="">Select a class</option>';
-                data.directories.forEach(classItem => {
-                    const option = document.createElement('option');
-                    option.value = classItem;
-                    option.textContent = classItem;
-                    classDropdown.appendChild(option);
-                });
-            } else {
-                console.error("Error fetching classes:", response.status, response.statusText);
-            }
-        }
+// Function to send a message to the chatbot
+async function sendMessage() {
+    try {
+        const userInputElement = document.getElementById('userInput');
+        const userInput = userInputElement.value;
+        const responseOutput = document.getElementById('responseOutput');
+        const thinkingIndicator = document.getElementById('thinkingIndicator');
 
-        // Fetch lessons based on selected class
-        async function fetchLessons() {
-            const lessonDropdown = document.getElementById('lessonDropdown');
-            lessonDropdown.innerHTML = '<option value="">Select a lesson</option>';
-        
-            if (selectedClassId) {
-                const response = await fetch(`${baseURL}/classes/${selectedClassId}/conundrums/`, {
-                    method: 'GET',
-                    credentials: 'include'
-                });
-        
-                if (response.ok) {
-                    const data = await response.json();
-                    data.files.forEach(lesson => {
-                        const option = document.createElement('option');
-                        option.value = lesson;
-                        option.textContent = lesson;
-                        lessonDropdown.appendChild(option);
-                    });
-                } else {
-                    console.error("Error fetching lessons:", response.status, response.statusText);
-                }
-            }
-        }
+        toggleThinkingIndicator(thinkingIndicator, true); // Show the thinking indicator
 
-        // Initial setup on page load
-        document.addEventListener('DOMContentLoaded', () => {
-            setCookie();
-            fetchClasses();
+        const response = await fetch(`${baseURL}/chatbot/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: userInput }), // Send the user input as a JSON payload
+            credentials: 'include'
         });
 
-        // Handling message sending from chat interface
-        async function sendMessage() {
-            const userInputElement = document.getElementById('userInput');
-            const userInput = userInputElement.value;
-            const responseOutput = document.getElementById('responseOutput');
-            const thinkingIndicator = document.getElementById('thinkingIndicator');
+        toggleThinkingIndicator(thinkingIndicator, false); // Hide the thinking indicator
 
-            thinkingIndicator.style.display = 'block';
+        if (!response.ok) throw new Error(`Failed to send message: ${response.statusText}`);
+        const data = await response.json();
+        updateChat(responseOutput, userInput, data.text); // Update the chat area with the bot's response
 
-            const response = await fetch(`${baseURL}/chatbot/`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ text: userInput }),
-                credentials: 'include'
-            });
+        userInputElement.value = ''; // Clear the user input
+        adjustTextAreaHeight(userInputElement); // Adjust the height of the textarea
+        userInputElement.scrollIntoView({ behavior: 'smooth' }); // Scroll the input into view
+    } catch (error) {
+        console.error('Error sending message:', error); // Log any errors that occur
+    }
+}
 
-            thinkingIndicator.style.display = 'none';
+// Function to show or hide the thinking indicator
+function toggleThinkingIndicator(indicator, show) {
+    indicator.style.display = show ? 'block' : 'none';
+}
 
-            if (response.ok) {
-                const data = await response.json();
-                const newResponse = data.text;
-                const formattedUserInput = formatLinks(userInput);
-                const formattedResponse = formatLinks(newResponse);
-                const timestamp = new Date().toLocaleTimeString();
+// Function to update the chat area with user and bot messages
+function updateChat(outputElement, userInput, botResponse) {
+    const formattedUserInput = formatLinks(userInput); // Format links in the user input
+    const formattedResponse = formatLinks(botResponse); // Format links in the bot response
+    const timestamp = new Date().toLocaleTimeString(); // Get the current time
 
-                const userMessage = `<div class="user-message"><span class="message-text">User: ${formattedUserInput}</span><span class="timestamp">${timestamp}</span></div>`;
-                const botMessage = `<div class="bot-message"><span class="message-text">Bot: ${formattedResponse}</span><span the_timestamp="${timestamp}"></span></div>`;
-                responseOutput.innerHTML += userMessage + botMessage;
-                responseOutput.scrollTop = responseOutput.scrollHeight;
+    const userMessage = `<div class="user-message"><span class="message-text">User: ${formattedUserInput}</span><span class="timestamp">${timestamp}</span></div>`;
+    const botMessage = `<div class="bot-message"><span class="message-text">Bot: ${formattedResponse}</span><span class="timestamp">${timestamp}</span></div>`;
+    outputElement.innerHTML += userMessage + botMessage; // Append the messages to the chat area
+    outputElement.scrollTop = outputElement.scrollHeight; // Scroll to the bottom of the chat area
+}
 
-                userInputElement.value = '';
-                userInputElement.style.height = 'auto';
-                userInputElement.scrollIntoView({ behavior: 'smooth' });
-            } else {
-                console.error("Error:", response.status, response.statusText);
-            }
+// Function to format links in a given text
+function formatLinks(text) {
+    const urlPattern = /(https?:\/\/[^\s]+)/g;
+    return text.replace(urlPattern, '<a href="$1" target="_blank">$1</a>'); // Replace URLs with clickable links
+}
+
+// Function to add event listeners for user interactions
+function addEventListeners() {
+    document.getElementById('sendButton').addEventListener('click', sendMessage); // Event listener for the send button
+    document.getElementById('userInput').addEventListener('keypress', function(event) {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault(); // Prevent the default Enter key behavior (i.e., new line)
+            sendMessage(); // Send the message when Enter is pressed
         }
+    });
 
-        // Additional event listeners for UI interactions
-        document.getElementById('sendButton').addEventListener('click', sendMessage);
-        document.getElementById('userInput').addEventListener('keypress', function(event) {
-            if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
-                sendMessage();
-            }
-        });
+    document.getElementById('userInput').addEventListener('input', function() {
+        adjustTextAreaHeight(this); // Adjust the height of the textarea when the input changes
+    });
 
-        document.getElementById('userInput').addEventListener('input', function() {
-            this.style.height = 'auto';
-            this.style.height = (this.scrollHeight) + 'px';
-        });
-
-        // Utility function to format links within text
-        function formatLinks(text) {
-            const urlPattern = /(https?:\/\/[^\s]+)/g;
-            return text.replace(urlPattern, '<a href="$1" target="_blank">$1</a>');
+    document.getElementById('classDropdown').addEventListener('change', function() {
+        if (!this.value) {
+            console.warn('No class selected. Please select a class.');
+            return; // Do nothing if no class is selected
         }
+        selectedClassId = this.value; // Update the selected class ID
+        fetchLessons(); // Fetch lessons for the selected class
+    });
 
-        // Event listener for class selection to manage class ID and load lessons
-        document.getElementById('classDropdown').addEventListener('change', function() {
-            if (!this.value) {
-                console.warn('No class selected. Please select a class.');
-                return; // Avoid executing fetchLessons if no class is selected
-            }
-            console.log('Class Selected');
-            selectedClassId = this.value; // Update global variable upon change
-            fetchLessons(); // Then fetch lessons based on the new class ID
-        });
-        
-        document.getElementById('lessonDropdown').addEventListener('change', async function() {
-            console.log('Lesson dropdown changed'); // Check if this log appears in the console
-            const selectedLesson = this.value;
-            const currentLessonName = document.getElementById('currentLessonName');
-        
-            if (selectedLesson) {
+    document.getElementById('lessonDropdown').addEventListener('change', async function() {
+        const selectedLesson = this.value;
+        const lessonNameDisplay = document.getElementById('lessonNameDisplay');
+
+        if (selectedLesson) {
+            try {
                 const response = await fetch(`${baseURL}/classes/${selectedClassId}/conundrums/${selectedLesson}`, {
                     method: 'GET',
                     credentials: 'include'
                 });
-        
-                if (response.ok) {
-                    const lessonContent = await response.text();
-                    sessionStorage.setItem('currentLesson', lessonContent);
-                    lessonNameDisplay.textContent = 'Loaded Lesson: ' + selectedLesson;
-                } else {
-                    console.error("Error fetching lesson content:", response.status, response.statusText);
-                    lessonNameDisplay.textContent = 'Failed to load lesson';
-                }
-            } else {
-                currentLessonName.textContent = 'No lesson selected';
+                if (!response.ok) throw new Error(`Failed to fetch lesson content: ${response.statusText}`);
+                const lessonContent = await response.text();
+                sessionStorage.setItem('currentLesson', lessonContent); // Store the lesson content in session storage
+                lessonNameDisplay.textContent = 'Loaded Lesson: ' + selectedLesson; // Display the loaded lesson name
+            } catch (error) {
+                console.error('Error fetching lesson content:', error); // Log any errors that occur
+                lessonNameDisplay.textContent = 'Failed to load lesson'; // Display an error message
             }
-        });
+        } else {
+            lessonNameDisplay.textContent = 'No lesson selected'; // Display a default message if no lesson is selected
+        }
+    });
+}
+
+// Function to adjust the height of a textarea based on its content
+function adjustTextAreaHeight(textarea) {
+    textarea.style.height = 'auto'; // Reset the height to auto
+    textarea.style.height = (textarea.scrollHeight) + 'px'; // Set the height to the scroll height
+}
 
     </script>
 </body>
