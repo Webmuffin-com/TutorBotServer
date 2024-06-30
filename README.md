@@ -1,5 +1,12 @@
 # TutorBot Server
+This application is designed as a TutorBot that can Tutor anything that can be done with text alone.  It is similar to a traditional ChatBot, but provides places to inject user defined content.  Here are the key features:
 
+1.  A unique prompt parameter ordering that prevents the bot from drifting of its prompts intentions.
+2.  Prebuilt Scenerio, Personality, Conundrum and ActionPlan.
+3.  A conundrum file that defines content, defines restrictions and give permissions to the LLM to use or not use it's own content.
+4.  Prebuilt functionality to show users what content you are defining and what is provided by the LLM.
+
+The design is simple and can be easily modified to do different things.
 
 ## Build executable bundles
 
