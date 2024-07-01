@@ -638,21 +638,25 @@ async function setCookie() {
         });
         if (!response.ok) throw new Error(`Failed to set cookie: ${response.statusText}`);
         const data = await response.json();
-        console.log(data.message); // Log the response message
+        console.log('Cookie set:', data.message); // Log the response message
     } catch (error) {
         console.error('Error setting cookie:', error); // Log any errors that occur
+        throw error; // Rethrow the error to be caught in the promise chain
     }
 }
 
 // Function to fetch available classes from the server
 async function fetchClasses() {
     try {
+        console.log('Fetching classes...');
         const response = await fetch(`${baseURL}/classes/`, {
             method: 'GET',
             credentials: 'include'
         });
         if (!response.ok) throw new Error(`Failed to fetch classes: ${response.statusText}`);
         const data = await response.json();
+        console.log('Classes fetched:', data); // Log the fetched data
+        data.directories.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase())); // Sort lessons alphabetically (case-insensitive)
         populateDropdown('classDropdown', data.directories, 'Select a class'); // Populate the class dropdown with fetched data
     } catch (error) {
         console.error('Error fetching classes:', error); // Log any errors that occur
@@ -664,7 +668,6 @@ async function fetchLessons() {
     try {
         const lessonDropdown = document.getElementById('lessonDropdown');
         lessonDropdown.innerHTML = '<option value="">Select a lesson</option>'; // Clear the lesson dropdown
-
         if (selectedClassId) {
             const response = await fetch(`${baseURL}/classes/${selectedClassId}/conundrums/`, {
                 method: 'GET',
@@ -672,6 +675,8 @@ async function fetchLessons() {
             });
             if (!response.ok) throw new Error(`Failed to fetch lessons: ${response.statusText}`);
             const data = await response.json();
+            console.log('Lessons fetched:', data); // Log the fetched data
+            data.files.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase())); // Sort lessons alphabetically (case-insensitive)
             populateDropdown('lessonDropdown', data.files, 'Select a lesson'); // Populate the lesson dropdown with fetched data
         }
     } catch (error) {
