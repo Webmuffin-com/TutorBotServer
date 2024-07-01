@@ -1,6 +1,6 @@
 import uuid
 import os
-from fastapi import FastAPI, Request, Response, HTTPException, Depends
+from fastapi import FastAPI, Request, Response, HTTPException, Depends, WebSocketDisconnect, WebSocket
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -8,13 +8,13 @@ from starlette.templating import Jinja2Templates
 from starlette.middleware.cors import CORSMiddleware
 import uvicorn
 
+from Utilities import setup_csv_logging
+import logging
+
 from LLM_Handler import invoke_llm
 from SessionCache import SessionCacheManager
-from Temp_html import temp_html_v3, temp_html_v5
-import logging
-from Utilities import setup_csv_logging
+from Temp_html import temp_html_v5
 
-# This configures the logging utilities so outputs are csv files that can be read with a spreadsheet editor
 setup_csv_logging()
 
 session_manager = SessionCacheManager()
@@ -36,6 +36,43 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.on_event("startup")
+async def startup_event():
+    logging.warning("Application startup")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    logging.warning("Application shutdown")
+
+
+async def cleanup_sessions():
+    # Function to clean up session caches as needed
+    print("Cleaning up sessions...")
+    # Implement your cleanup logic here
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    while True:
+        try:
+            message = await websocket.receive_text()
+            # Process incoming messages
+
+            # Example: Store session information
+       #     session_cache[websocket] = {"user_id": "example_user_id"}
+
+            # Example: Handle your business logic
+
+            await websocket.send_text(f"Message received: {message}")
+
+        except WebSocketDisconnect:
+            # Clean up session cache on disconnect
+      #      if websocket in session_cache:
+      #          del session_cache[websocket]
+            await cleanup_sessions()
+            break
 @app.middleware("http")
 async def add_cors_headers(request: Request, call_next):
     logging.warning(request.headers)
@@ -109,7 +146,7 @@ async def generate_response(p_session_key, p_Request):
     sessionCache = session_manager.get_session( p_session_key)
 
     if (sessionCache):
-        return await invoke_llm (sessionCache, p_Request)
+        return await invoke_llm (sessionCache, p_Request, p_session_key)
     else:
         response = "Received unknown session key"
         logging.error (f"session key ({p_session_key}) was not found.  returning ({response})", extra={'sessionKey': p_session_key})
@@ -121,7 +158,7 @@ async def chatbot_endpoint(request: Request, message: PyMessage) -> JSONResponse
     session_key = request.cookies.get("session_key")
     response_text = await generate_response(session_key, message.text)
 
-    logging.warning(f"Received chatbot request ({message.text}), response ({response_text})", extra={'sessionKey': session_key})  # Debug statement
+#    logging.warning(f"Received chatbot request ({message.text}), response ({response_text})", extra={'sessionKey': session_key})  # Debug statement
 
     response = JSONResponse(content={"text": response_text})
     origin = request.headers.get('origin')
@@ -244,6 +281,10 @@ async def load_conundrum_file(class_directory: str, file_name: str, request: Req
         raise HTTPException(status_code=500, detail="Error loading conundrum file or action plan")
 
 if __name__ == '__main__':
+    # This configures the logging utilities so outputs are csv files that can be read with a spreadsheet editor
+
+    logging.warning("Logging setup is configured and running TutorBot_Server")
+
     print('running TutorBot_Server')
 
     uvicorn.run(

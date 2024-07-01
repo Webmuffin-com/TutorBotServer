@@ -1,10 +1,12 @@
 import os
-import logging
 import json
 import httpx
+import logging
+
 from bs4 import BeautifulSoup
+
 import DefaultParameters
-from Utilities import setup_csv_logging, format_messages
+from Utilities import setup_csv_logging
 from SessionCache import SessionCache
 
 api_key = os.getenv('OPENAI_API_KEY')
@@ -13,7 +15,7 @@ if not api_key:
 
 LastResponse = ""
 
-async def invoke_llm(p_SessionCache: SessionCache, p_Request: str):
+async def invoke_llm(p_SessionCache: SessionCache, p_Request: str, p_sessionKey: str):
     global LastResponse
     try:
         scenerio = DefaultParameters.get_default_scenario()
@@ -30,12 +32,12 @@ async def invoke_llm(p_SessionCache: SessionCache, p_Request: str):
         messages.append({"role": "user", "content": p_Request})
         messages.append({"role": "system", "content": actionPlan})
 
-        logging.warning(f"LLM User's Request ({p_Request})")
+       # logging.warning(f"LLM User's Request ({p_Request})", extra={'sessionKey': session_key})
 
         p_SessionCache.m_simpleCounterLLMConversation.add_message('user', p_Request, 'LLM')  # now we add the request.
 
         # Test the messages structure before formatting
-        logging.warning(f"Messages structure: {messages}")
+      #  logging.warning(f"Messages structure: {messages}", extra={'sessionKey': session_key})
 
         # Format messages for the payload
         json_payload = {
@@ -46,7 +48,7 @@ async def invoke_llm(p_SessionCache: SessionCache, p_Request: str):
         }
 
         # Debugging: Print out the JSON payload
-        logging.warning(f"JSON payload: {json.dumps(json_payload, indent=2)}")
+        logging.warning(f"Request from User: ({p_Request})\n {json.dumps(json_payload, indent=2)}", extra={'sessionKey': p_sessionKey})
 
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(
@@ -57,13 +59,19 @@ async def invoke_llm(p_SessionCache: SessionCache, p_Request: str):
 
         response.raise_for_status()
         completion = response.json()
-        logging.warning(f"LLM Response is: {completion['choices'][0]['message']['content']}. Details are ({completion})")
-
         BotResponse = completion['choices'][0]['message']['content']
 
+        # Log token usage metrics
+        if 'usage' in completion:
+            usage = completion['usage']
+            logging.info(f"Tokens used - Prompt tokens: {usage.get('prompt_tokens')}, Completion tokens: \
+            {usage.get('completion_tokens')}, Total tokens: {usage.get('total_tokens')}", extra={'sessionKey': p_sessionKey})
+
         # Strip HTML tags from BotResponse to put in conversation as it messes up the LLM to feed HTML into it.
-#        soup = BeautifulSoup(BotResponse, 'html.parser')
-#        plain_text_response = soup.get_text().replace('\n', ' ').strip()
+        soup = BeautifulSoup(BotResponse, 'html.parser')
+        plain_text_response = soup.get_text().replace('\n', ' ').strip()
+
+        logging.warning(f"Response from LLM: ({plain_text_response})\n {completion['choices'][0]['message']['content']}. Details are ({completion})", extra={'sessionKey': p_sessionKey})
 
         p_SessionCache.m_simpleCounterLLMConversation.add_message('assistant', BotResponse, 'LLM')  # now we add the request.
 
@@ -71,11 +79,11 @@ async def invoke_llm(p_SessionCache: SessionCache, p_Request: str):
 
     except httpx.HTTPStatusError as e:
         # Handle HTTP errors
-        logging.error(f"HTTP error occurred: {e.response.status_code} - {e.response.text}")
+        logging.error(f"HTTP error occurred: {e.response.status_code} - {e.response.text}", extra={'sessionKey': p_sessionKey})
         return f"An HTTP error ({e.response.status_code}) occurred: {e.response.text}"
     except Exception as e:
         # Handle general exceptions
-        logging.error(f"An exception occurred while calling LLM with first message: {e}", exc_info=True)
+        logging.error(f"An exception occurred while calling LLM with first message: {e}", exc_info=True, extra={'sessionKey': p_sessionKey})
         return f"An error ({e}) occurred processing your request, Please try again"
 
 if __name__ == "__main__":

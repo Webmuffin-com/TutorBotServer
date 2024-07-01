@@ -1,9 +1,5 @@
 import logging
 import os
-from datetime import datetime
-import threading
-import json
-
 import json
 from datetime import datetime
 
@@ -148,6 +144,9 @@ class CSVLogFormatter(logging.Formatter):
         formatted_date = datetime.fromtimestamp(record.created).strftime('%Y-%m-%d')
         formatted_time = datetime.fromtimestamp(record.created).strftime('%H-%M-%S.%f')[:12]  # Slices the string to keep only milliseconds
         message = record.getMessage().replace('"', '""')  # Escape quotes in the message
+        # Use getattr to safely access sessionKey
+        session_key = getattr(record, 'sessionKey', 'None')
+
         formatted_record = f'"{formatted_date}","{record.filename}","{record.funcName}","{record.levelname}","{record.thread}","{formatted_time}","{message}", "{record.sessionKey}"'
         return formatted_record
 
