@@ -24,3 +24,7 @@ classes/*
 # Pyinstaller
 build
 dist
+
+# ENV
+
+env.txt

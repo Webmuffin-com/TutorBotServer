@@ -7,6 +7,10 @@ from pydantic import BaseModel
 from starlette.templating import Jinja2Templates
 from starlette.middleware.cors import CORSMiddleware
 import uvicorn
+from dotenv import load_dotenv
+
+# Load environmental variables file from env.txt
+load_dotenv("env.txt")
 
 from Utilities import setup_csv_logging
 import logging
@@ -14,6 +18,7 @@ import logging
 from LLM_Handler import invoke_llm
 from SessionCache import SessionCacheManager
 from Temp_html import temp_html_v5
+
 
 setup_csv_logging()
 
@@ -45,34 +50,6 @@ async def startup_event():
 async def shutdown_event():
     logging.warning("Application shutdown")
 
-
-async def cleanup_sessions():
-    # Function to clean up session caches as needed
-    print("Cleaning up sessions...")
-    # Implement your cleanup logic here
-
-
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    while True:
-        try:
-            message = await websocket.receive_text()
-            # Process incoming messages
-
-            # Example: Store session information
-       #     session_cache[websocket] = {"user_id": "example_user_id"}
-
-            # Example: Handle your business logic
-
-            await websocket.send_text(f"Message received: {message}")
-
-        except WebSocketDisconnect:
-            # Clean up session cache on disconnect
-      #      if websocket in session_cache:
-      #          del session_cache[websocket]
-            await cleanup_sessions()
-            break
 @app.middleware("http")
 async def add_cors_headers(request: Request, call_next):
     logging.warning(request.headers)

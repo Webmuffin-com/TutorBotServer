@@ -9,7 +9,8 @@ import DefaultParameters
 from Utilities import setup_csv_logging
 from SessionCache import SessionCache
 
-api_key = os.getenv('OPENAI_API_KEY')
+api_key = os.getenv('OPENAI_API_KEY_TUTORBOT')
+print(api_key)
 if not api_key:
     logging.error("Problems loading key because OPENAI_API_KEY environment variable not set")
 

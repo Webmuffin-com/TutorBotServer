@@ -8,6 +8,11 @@ This application is designed as a TutorBot that can Tutor anything that can be d
 
 The design is simple and can be easily modified to do different things.
 
+
+## Pre requisites
+
+In order to set the required secrets you need to duplicate the file `env.example.txt` and name it `env.txt` and fill its contents with the corresponding secrets.
+
 ## Build executable bundles
 
 ### MacOS / Linux
@@ -89,10 +94,35 @@ python3 -m PyInstaller .\TutorBot_Server.spec
 - Using the terminal navigate to the `dist` directory.
 - Run the command: `./TutorBot_Server`
 
-## From windows
+### From windows
 
 - Using the file explorer navigate to the `dist` directory.
 - Double click `TutorBot_Server.exe`.
 
 
 pyinstaller TutorBot_Server.py --onefile --console --log-level=WARN --noconfirm --hidden-import=TutorBot_Server --add-data "static:static"
+
+
+
+
+
+## Update requirements files after adding dependency
+
+There are two requirements files for windows and unix based systems, every time you add a dependency you should update this files by running the following commands.
+
+### MacOS / Unix
+
+``` bash
+python3 -m pip freeze > requirements-unix.txt
+```
+
+### Windows
+
+``` bash
+python3 -m pip freeze > requirements-windows.txt --exclude uvloop
+```
+
+
+## Contibutors
+
+This application was written by Michael Schmidt <mike.schmidt@webmuffin.com> and Santiago Forero <biolimbo@pm.me>.

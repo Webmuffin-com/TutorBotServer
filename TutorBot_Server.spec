@@ -5,7 +5,7 @@ a = Analysis(
     ['TutorBot_Server.py'],
     pathex=[],
     binaries=[],
-    datas=[('static', 'static')],
+    datas=[('static', 'static'), ('env.txt','env.txt')],
     hiddenimports=['TutorBot_Server'],
     hookspath=[],
     hooksconfig={},
