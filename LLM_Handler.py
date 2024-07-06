@@ -22,7 +22,11 @@ async def invoke_llm(p_SessionCache: SessionCache, p_Request: str, p_sessionKey:
         scenerio = DefaultParameters.get_default_scenario()
         personality = DefaultParameters.get_default_personality()
         conundrum = p_SessionCache.get_conundrum()
-        actionPlan = DefaultParameters.get_default_action_plan()
+
+        if (p_SessionCache.get_action_plan() != ""):
+            actionPlan = p_SessionCache.get_action_plan()
+        else:
+            actionPlan = DefaultParameters.get_default_action_plan()
 
         messages = []
 

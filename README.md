@@ -8,6 +8,11 @@ This application is designed as a TutorBot that can Tutor anything that can be d
 
 The design is simple and can be easily modified to do different things.
 
+# Caveat
+1. Conversational histories are maintained through the session's life.  As there grow, they increase costs.   \
+Dropping previous conversations has downsides and needs to be factored in when needed.
+2. Sessions are not cleared out.  As they grow it could slow down processing, but that is unlikely for prototyping purposes
+
 
 ## Pre requisites
 
