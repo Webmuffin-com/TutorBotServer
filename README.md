@@ -131,3 +131,5 @@ python3 -m pip freeze > requirements-windows.txt --exclude uvloop
 ## Contibutors
 
 This application was written by Michael Schmidt <mike.schmidt@webmuffin.com> and Santiago Forero <biolimbo@pm.me>.
+
+.......
