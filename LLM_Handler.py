@@ -12,7 +12,7 @@ from SessionCache import SessionCache
 api_key = os.getenv('OPENAI_API_KEY_TUTORBOT')
 print(api_key)
 if not api_key:
-    logging.error("Problems loading key because OPENAI_API_KEY environment variable not set")
+    logging.error("Problems loading key because OPENAI_API_KEY_TUTORBOT environment variable not set")
 
 LastResponse = ""
 
