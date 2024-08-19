@@ -102,7 +102,7 @@ textarea.user-input {
 }
 
 .user-message {
-    color: #0000FF;
+    color: #0000FF; /* Royal Blue */
     background-color: #e6f7ff;
     align-self: flex-end;
     text-align: right;
@@ -118,7 +118,7 @@ textarea.user-input {
 
 .parental-topic {
     color: green;
-    font-weight: bold; /* This will italicize the text */
+    font-weight: bold; /* This will bold */
 }
 
 .cursor {
@@ -133,12 +133,103 @@ textarea.user-input {
 
 .content {
     color: blue;
-    font-style: normal; /* This will italicize the text */
+    font-style: normal;
 }
 
 .elaborate {
     color: darkblue;
-    font-style: normal; /* This will italicize the text */
+    font-style: normal;
+}
+
+.green-normal {
+    color: green;
+    font-weight: normal;
+}
+
+.green-bold {
+    color: green;
+    font-weight: bold; /* This will bold */
+}
+
+.darkgreen-normal {
+    color: darkgreen;
+    font-weight: normal;
+}
+
+.darkgreen-bold {
+    color: darkgreen;
+    font-weight: bold; /* This will bold */
+}
+
+.orange-normal {
+    color: orange;
+    font-weight: normal;
+}
+.orange-bold {
+    color: orange;
+    font-weight: bold;
+}
+
+
+.blue-normal {
+    color: blue;
+    font-weight: normal;
+}
+
+
+.blue-bold {
+    color: blue;
+    font-weight: bold;
+}
+
+.darkblue-normal{
+    color: darkblue;
+    font-weight: normal;
+}
+
+.darkblue-bold{
+    color: darkblue;
+    font-weight: bold;
+}
+
+.purple-normal{
+    color: rebeccapurple;
+    font-weight: normal;
+}
+
+.purple-bold{
+    color: rebeccapurple;
+    font-weight: bold;
+}
+
+.red-normal{
+    color: red;
+    font-weight: normal;
+}
+
+.red-bold{
+    color: red;
+    font-weight: bold;
+}
+
+.pink-normal{
+    color: deeppink;
+    font-weight: normal;
+}
+
+.pink-bold{
+    color: deeppink;
+    font-weight: bold;
+}
+
+.gray-normal{
+    color: darkslategray;
+    font-weight: normal;
+}
+
+.gray-bold{
+    color: darkslategray;
+    font-weight: bold;
 }
 
 .timestamp {

@@ -573,7 +573,7 @@ def temp_html_v5():
     <div class="container">
         <!-- Header section with title and instructions -->
         <div class="header">
-            <h1>Project Management Learning Center</h1>
+            <h1>TutorBot Learning Center</h1>
             <p>Select your class from the dropdown below and then select the lesson you would like to work on.</p>
             <br>
             <!-- Dropdowns for selecting class and lesson -->
@@ -606,6 +606,8 @@ def temp_html_v5():
             </div>
             <!-- Send button for submitting requests -->
             <button id="sendButton">Send</button>
+            <button id="copyButton">Copy</button>
+
         </div>
     </div>
 
@@ -744,6 +746,16 @@ function updateChat(outputElement, userInput, botResponse) {
     outputElement.scrollTop = outputElement.scrollHeight; // Scroll to the bottom of the chat area
 }
 
+function copyToClipboard() {
+    const responseOutput = document.getElementById('responseOutput').innerText;
+    navigator.clipboard.writeText(responseOutput).then(() => {
+        console.log('Content copied to clipboard!');
+        alert('Content copied to clipboard!');  // Optional: alert the user of successful copy.
+    }).catch(err => {
+        console.error('Failed to copy text: ', err);
+    });
+}
+
 // Function to format links in a given text
 function formatLinks(text) {
     const urlPattern = /(https?:\/\/[^\s]+)/g;
@@ -753,6 +765,7 @@ function formatLinks(text) {
 // Function to add event listeners for user interactions
 function addEventListeners() {
     document.getElementById('sendButton').addEventListener('click', sendMessage); // Event listener for the send button
+    document.getElementById('copyButton').addEventListener('click', copyToClipboard);
     document.getElementById('userInput').addEventListener('keypress', function(event) {
         if (event.key === 'Enter' && !event.shiftKey) {
             event.preventDefault(); // Prevent the default Enter key behavior (i.e., new line)
