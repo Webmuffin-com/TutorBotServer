@@ -14,6 +14,12 @@ print(api_key)
 if not api_key:
     logging.error("Problems loading key because OPENAI_API_KEY_TUTORBOT environment variable not set")
 
+api_model = os.getenv('OPENAI_MODEL')
+if not api_model:
+    logging.error("No model selected, using gpt-4-0125-preview as default")
+else:
+    logging.error(f"Different model selected, using {api_model}")
+
 LastResponse = ""
 
 async def invoke_llm(p_SessionCache: SessionCache, p_Request: str, p_sessionKey: str):
@@ -46,7 +52,7 @@ async def invoke_llm(p_SessionCache: SessionCache, p_Request: str, p_sessionKey:
 
         # Format messages for the payload
         json_payload = {
-            "model": "gpt-4-0125-preview",
+            "model": api_model,
             "messages": messages,
             "temperature": 0.0,
             "top_p": 0.0
