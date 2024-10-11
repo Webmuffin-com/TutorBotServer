@@ -7,7 +7,6 @@ class SessionCache:
         self.m_data        = data
         self.m_last_update = datetime.utcnow()
         self.m_simpleCounterLLMConversation = SimpleCounterLLMConversation()
-        self.m_personality = DefaultParameters.get_default_personality()
         self.m_conundrum   = DefaultParameters.get_default_conundrum()
         self.m_scenario    = DefaultParameters.get_default_scenario()
         self.m_actionPlan  = DefaultParameters.get_default_action_plan()
@@ -25,9 +24,6 @@ class SessionCache:
     def set_action_plan(self, p_action_plan):
         self.m_actionPlan = p_action_plan
 
-    def set_personality(self, p_personality):
-        self.m_personality = p_personality
-
     def get_conundrum(self):
         return self.m_conundrum
 
@@ -36,9 +32,6 @@ class SessionCache:
 
     def get_action_plan(self):
         return self.m_actionPlan
-
-    def get_personality(self):
-        return self.m_personality
 
 
 from datetime import datetime, timedelta

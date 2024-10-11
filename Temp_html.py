@@ -824,3 +824,4 @@ function adjustTextAreaHeight(textarea) {
 
    """
     return html
+

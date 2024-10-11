@@ -26,7 +26,6 @@ async def invoke_llm(p_SessionCache: SessionCache, p_Request: str, p_sessionKey:
     global LastResponse
     try:
         scenerio = DefaultParameters.get_default_scenario()
-        personality = DefaultParameters.get_default_personality()
         conundrum = p_SessionCache.get_conundrum()
 
         if (p_SessionCache.get_action_plan() != ""):
@@ -37,7 +36,6 @@ async def invoke_llm(p_SessionCache: SessionCache, p_Request: str, p_sessionKey:
         messages = []
 
         messages.append({"role": "system", "content": scenerio})
-        messages.append({"role": "system", "content": personality})
         messages.append({"role": "system", "content": conundrum})
         messages.extend(p_SessionCache.m_simpleCounterLLMConversation.get_all_previous_messages())
         messages.append({"role": "user", "content": p_Request})

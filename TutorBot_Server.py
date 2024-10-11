@@ -207,8 +207,6 @@ async def load_conundrum_file(class_directory: str, file_name: str, request: Req
     action_plan_file_path = os.path.normpath(action_plan_file_path)
     scenario_file_path = os.path.join(CLASSES_DIR, class_directory, "scenario.txt")
     scenario_file_path = os.path.normpath(scenario_file_path)
-    personality_file_path = os.path.join(CLASSES_DIR, class_directory, "personality.txt")
-    personality_file_path = os.path.normpath(personality_file_path)
 
     session_key = request.cookies.get("session_key")
     session_cache = session_manager.get_session(session_key)
@@ -244,12 +242,6 @@ async def load_conundrum_file(class_directory: str, file_name: str, request: Req
             with open(scenario_file_path, "r") as scenario_file:
                 logging.warning(f"also loaded scenario file {scenario_file_path}", extra={'sessionKey': session_key})
                 session_cache.set_scenario(scenario_file.read())
-
-        # Load personality file if it exists
-        if os.path.exists(personality_file_path):
-            with open(personality_file_path, "r") as personality_file:
-                logging.warning(f"also loaded personality file {personality_file_path}", extra={'sessionKey': session_key})
-                session_cache.set_personality(personality_file.read())
 
         return JSONResponse(content={"message": "Conundrum file loaded successfully"})
 

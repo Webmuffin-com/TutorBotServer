@@ -20,13 +20,6 @@ Both PERMISSION and RESTRICT tags only operate within the context of the TOPIC i
 """
     return prompt_parameter
 
-def get_default_personality():
-    prompt_parameter = f"""
-    <PERSONALITY> You are a patient tutor and you speak clearly  </PERSONALITY>
-
-    """
-    return prompt_parameter
-
 
 def get_default_conundrum():
     prompt_parameter = f"""
