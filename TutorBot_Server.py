@@ -17,7 +17,9 @@ import logging
 
 from LLM_Handler import invoke_llm
 from SessionCache import SessionCacheManager
+from Temp_html import temp_html_v5
 from Temp_html import temp_html_v6
+from Temp_html import temp_html_v7
 
 
 setup_csv_logging()
@@ -147,7 +149,7 @@ async def chatbot_endpoint(request: Request, message: PyMessage) -> JSONResponse
 # Define a welcome endpoint
 @app.get("/", response_class=HTMLResponse)
 async def welcome(request: Request):
-    result = temp_html_v6()
+    result = temp_html_v5()
 
     logging.warning (f"Loaded new client web page")
     return HTMLResponse(content=result)

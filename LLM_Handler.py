@@ -22,6 +22,21 @@ else:
 
 LastResponse = ""
 
+import re
+def escape_xml_within_pre_tags(text):
+    # This function finds all <pre>...</pre> blocks and escapes special XML characters within them
+    def escape_xml(match):
+        xml_content = match.group(0)
+        # Escape special characters in the XML content
+        escaped_content = xml_content.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        # Replace the original '<pre>' and '</pre>' with their original form
+        escaped_content = escaped_content.replace("&lt;pre&gt;", "<pre>").replace("&lt;/pre&gt;", "</pre>")
+        return escaped_content
+
+    # Use regex to apply the escaping function to all content within <pre>...</pre>
+    return re.sub(r'(?<=<pre>)(.*?)(?=</pre>)', escape_xml, text, flags=re.DOTALL)
+
+
 async def invoke_llm(p_SessionCache: SessionCache, p_Request: str, p_sessionKey: str):
     global LastResponse
     try:
@@ -80,9 +95,11 @@ async def invoke_llm(p_SessionCache: SessionCache, p_Request: str, p_sessionKey:
         soup = BeautifulSoup(BotResponse, 'html.parser')
         plain_text_response = soup.get_text().replace('\n', ' ').strip()
 
+        EscapedXMLTags = escape_xml_within_pre_tags (BotResponse)
+
         logging.warning(f"Response from LLM: ({plain_text_response})\n {completion['choices'][0]['message']['content']}. Details are ({completion})", extra={'sessionKey': p_sessionKey})
 
-        p_SessionCache.m_simpleCounterLLMConversation.add_message('assistant', BotResponse, 'LLM')  # now we add the request.
+        p_SessionCache.m_simpleCounterLLMConversation.add_message('assistant', EscapedXMLTags, 'LLM')  # now we add the request.
 
         return BotResponse
 
