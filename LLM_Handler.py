@@ -101,7 +101,7 @@ async def invoke_llm(p_SessionCache: SessionCache, p_Request: str, p_sessionKey:
 
         p_SessionCache.m_simpleCounterLLMConversation.add_message('assistant', EscapedXMLTags, 'LLM')  # now we add the request.
 
-        return BotResponse
+        return EscapedXMLTags
 
     except httpx.HTTPStatusError as e:
         # Handle HTTP errors
