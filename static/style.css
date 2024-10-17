@@ -86,6 +86,9 @@ textarea.user-input {
     flex-direction: column;
     gap: 10px;
     font-style: italic; /* This will italicize the text */
+    word-wrap: break-word; /* Older browsers */
+    overflow-wrap: break-word; /* Modern browsers */
+    white-space: pre-wrap; /* Maintains whitespace formatting and wraps text */
 }
 
 .user-message, .bot-message {
@@ -98,6 +101,7 @@ textarea.user-input {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
+    box-sizing: border-box;
     /*align-items: flex-end;*/
 }
 
@@ -114,6 +118,12 @@ textarea.user-input {
     align-self: flex-start;
     text-align: left;
     font-style: italic; /* This will italicize the text */
+}
+
+.xml-output {
+    white-space: pre-wrap; /* Preserve whitespace and wrap long lines */
+    word-wrap: break-word; /* Break long words if necessary */
+    overflow-wrap: break-word; /* Ensures text stays inside the container */
 }
 
 .parental-topic {
