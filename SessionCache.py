@@ -1,15 +1,18 @@
+from datetime import datetime, timedelta
+
 import DefaultParameters
 from Utilities import SimpleCounterLLMConversation
+
 
 class SessionCache:
     def __init__(self, session_key: str, data: dict):
         self.m_session_key = session_key
-        self.m_data        = data
+        self.m_data = data
         self.m_last_update = datetime.utcnow()
         self.m_simpleCounterLLMConversation = SimpleCounterLLMConversation()
-        self.m_conundrum   = DefaultParameters.get_default_conundrum()
-        self.m_scenario    = DefaultParameters.get_default_scenario()
-        self.m_actionPlan  = DefaultParameters.get_default_action_plan()
+        self.m_conundrum = DefaultParameters.get_default_conundrum()
+        self.m_scenario = DefaultParameters.get_default_scenario()
+        self.m_actionPlan = DefaultParameters.get_default_action_plan()
 
     def update(self, data: dict):
         self.m_data.update(data)
@@ -34,8 +37,6 @@ class SessionCache:
         return self.m_actionPlan
 
 
-from datetime import datetime, timedelta
-
 class SessionCacheManager:
     def __init__(self, idle_timeout: timedelta = timedelta(hours=4)):
         self.sessions = {}
@@ -54,7 +55,10 @@ class SessionCacheManager:
 
     def cleanup_idle_sessions(self):
         now = datetime.utcnow()
-        idle_sessions = [key for key, session in self.sessions.items()
-                         if now - session.last_update > self.idle_timeout]
+        idle_sessions = [
+            key
+            for key, session in self.sessions.items()
+            if now - session.last_update > self.idle_timeout
+        ]
         for session_key in idle_sessions:
             self.remove_session(session_key)

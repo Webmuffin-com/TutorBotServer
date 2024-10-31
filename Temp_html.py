@@ -149,6 +149,7 @@ def temp_html_v1():
     """
     return html
 
+
 def temp_html_v2():
     html = """
 <!DOCTYPE html>
@@ -254,6 +255,7 @@ def temp_html_v2():
 
    """
     return html
+
 
 def temp_html_v3():
     html = """
@@ -372,6 +374,7 @@ def temp_html_v3():
 
    """
     return html
+
 
 def temp_html_v4():
     html = """
@@ -559,6 +562,7 @@ def temp_html_v4():
    """
     return html
 
+
 def temp_html_v5():
     html = """
 <!DOCTYPE html>
@@ -620,6 +624,7 @@ let selectedClassId = null;
 
 // Event listener to initialize the application once the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('Initializing application...');
     initializeApp();
 });
 

@@ -3,6 +3,7 @@ import os
 import json
 from datetime import datetime
 
+
 class SimpleCounterLLMConversation:
     def __init__(self):
         self.conversation = []
@@ -20,7 +21,7 @@ class SimpleCounterLLMConversation:
             "timestamp": datetime.now().isoformat(),
             "role": role,
             "content": content,
-            "participant_id": participant_id or "default"
+            "participant_id": participant_id or "default",
         }
         self.conversation.append(message)
         self.message_id_counter += 1  # Increment the counter for the next message
@@ -45,7 +46,13 @@ class SimpleCounterLLMConversation:
         """
         Outputs the conversation in a simplified format, focusing on 'role' and 'content'.
         """
-        return json.dumps([{"role": msg["role"], "content": msg["content"]} for msg in self.conversation], indent=2)
+        return json.dumps(
+            [
+                {"role": msg["role"], "content": msg["content"]}
+                for msg in self.conversation
+            ],
+            indent=2,
+        )
 
     def get_history(self):
         """
@@ -64,9 +71,12 @@ class SimpleCounterLLMConversation:
         """
         Provides a detailed representation of the conversation for debugging.
         """
-        conversation_preview = ', '.join(
-            f"{msg['role']}: {msg['content'][:30]}..." for msg in self.conversation[:5])
-        return f"<SimpleCounterLLMConversation (Last 5 Messages): {conversation_preview}>"
+        conversation_preview = ", ".join(
+            f"{msg['role']}: {msg['content'][:30]}..." for msg in self.conversation[:5]
+        )
+        return (
+            f"<SimpleCounterLLMConversation (Last 5 Messages): {conversation_preview}>"
+        )
 
     def get_all_previous_messages(self):
         """
@@ -74,7 +84,7 @@ class SimpleCounterLLMConversation:
         Returns:
             A list of dictionaries, each containing the role and content of each message in the conversation.
         """
-        return [{'role': message['role'], 'content': message['content']} for message in self.conversation]
+        return [(message["role"], message["content"]) for message in self.conversation]
 
     def __iter__(self):
         """
@@ -89,7 +99,9 @@ class SimpleCounterLLMConversation:
             A string containing all user questions separated by a space.
         """
         # Filter for messages where the role is 'user' and concatenate the content
-        user_questions = ' '.join(msg['content'] for msg in self.conversation if msg['role'] == 'user')
+        user_questions = " ".join(
+            msg["content"] for msg in self.conversation if msg["role"] == "user"
+        )
         return user_questions
 
     def get_last_assistance_response(self):
@@ -99,12 +111,15 @@ class SimpleCounterLLMConversation:
         """
         # Iterate backwards through the conversation to find the last 'assistant' message and return only its content
         for message in reversed(self.conversation):
-            if message['role'] == 'assistant':
-                return message['content']  # Return only the content of the last assistant message
+            if message["role"] == "assistant":
+                return message[
+                    "content"
+                ]  # Return only the content of the last assistant message
         return None  # Return None if no 'assistant' messages are found
 
 
 global_conversation = SimpleCounterLLMConversation()
+
 
 def generate_log_filename(prefix="logs/TutorBot_Log", extension="csv"):
     """
@@ -122,14 +137,15 @@ def generate_log_filename(prefix="logs/TutorBot_Log", extension="csv"):
     return os.path.join(log_dir, f"{os.path.basename(prefix)}_{timestamp}.{extension}")
 
 
-'''
+"""
     we will prefix logs with the following tags
     TTS
     MIC
     LLM
     STATE
     LOOP   for general processing associated with looping function
-'''
+"""
+
 
 class CSVLogFormatter(logging.Formatter):
     def __init__(self):
@@ -137,21 +153,24 @@ class CSVLogFormatter(logging.Formatter):
 
     def format(self, record):
 
-        print('--------------')
+        print("--------------")
         print(record)
-        print('--------------')
+        print("--------------")
         # Format time to separate date and time components
-        formatted_date = datetime.fromtimestamp(record.created).strftime('%Y-%m-%d')
-        formatted_time = datetime.fromtimestamp(record.created).strftime('%H-%M-%S.%f')[:12]  # Slices the string to keep only milliseconds
+        formatted_date = datetime.fromtimestamp(record.created).strftime("%Y-%m-%d")
+        formatted_time = datetime.fromtimestamp(record.created).strftime("%H-%M-%S.%f")[
+            :12
+        ]  # Slices the string to keep only milliseconds
         message = record.getMessage().replace('"', '""')  # Escape quotes in the message
         # Use getattr to safely access sessionKey
-        session_key = getattr(record, 'sessionKey', 'None')
+        session_key = getattr(record, "sessionKey", "None")
 
-        formatted_record = f'"{formatted_date}","{record.filename}","{record.funcName}","{record.levelname}","{record.thread}","{formatted_time}","{message}", "{record.sessionKey}"'
+        formatted_record = f'"{formatted_date}","{record.filename}","{record.funcName}","{record.levelname}","{record.thread}","{formatted_time}","{message}", "{session_key}"'
         return formatted_record
 
 
 blogging_setup = False
+
 
 def setup_csv_logging():
     global blogging_setup
@@ -160,14 +179,16 @@ def setup_csv_logging():
     blogging_setup = True
 
     log_filename = generate_log_filename()
-    file_handler = logging.FileHandler(log_filename, mode='a')
+    file_handler = logging.FileHandler(log_filename, mode="a")
     csv_formatter = CSVLogFormatter()
     file_handler.setFormatter(csv_formatter)
 
     # Check if the log file is new or empty, and if so, write the header
     if not os.path.exists(log_filename) or os.stat(log_filename).st_size == 0:
-        with open(log_filename, 'w') as f:
-            f.write('"Date","File Name","Func Name","Trace Level","Thread ID","Time","Message", "Session Key"\n')
+        with open(log_filename, "w") as f:
+            f.write(
+                '"Date","File Name","Func Name","Trace Level","Thread ID","Time","Message", "Session Key"\n'
+            )
 
     # Create a StreamHandler for output to the console
     console_handler = logging.StreamHandler()
@@ -192,7 +213,9 @@ def format_messages(messages):
 
     # Properly strip the last comma and newline for cleaner output
     if formatted_message.endswith(", \n\n"):
-        formatted_message = formatted_message[:-3]  # Remove the last three characters: comma, newline, newline
+        formatted_message = formatted_message[
+            :-3
+        ]  # Remove the last three characters: comma, newline, newline
 
     # Return the fully formatted message
     return formatted_message
@@ -200,11 +223,14 @@ def format_messages(messages):
 
 # Setup CSV logging immediately
 
+
 def main():
     setup_csv_logging()
     # Example usage of different logging levels
     logging.debug("This is a debug message.")
-    logging.info("This is an info message with, commas and 'quotes' to demonstrate formatting.")
+    logging.info(
+        "This is an info message with, commas and 'quotes' to demonstrate formatting."
+    )
     logging.warning("This is a warning message.")
     logging.error("This is an error message.")
     logging.critical("This is a critical message.")
