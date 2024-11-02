@@ -1,11 +1,6 @@
 import logging
 import re
 
-from langchain_anthropic import ChatAnthropic
-from langchain_google_vertexai import ChatVertexAI
-from langchain_openai import ChatOpenAI
-from langchain_ibm import ChatWatsonx
-from langchain_ollama import ChatOllama
 
 from bs4 import BeautifulSoup
 
@@ -35,6 +30,7 @@ def initialize_llm():
 
     match model_provider:
         case "OPENAI":
+            from langchain_openai import ChatOpenAI
             return ChatOpenAI(
                 model=model,
                 max_tokens=max_tokens,
@@ -47,6 +43,7 @@ def initialize_llm():
                 api_key=api_key,
             )
         case "GOOGLE":
+            from langchain_google_vertexai import ChatVertexAI
             return ChatVertexAI(
                 model_name=model,
                 max_tokens=max_tokens,
@@ -58,6 +55,7 @@ def initialize_llm():
                 presence_penalty=presence_penalty,
             )
         case "IBM":
+            from langchain_ibm import ChatWatsonx
             return ChatWatsonx(
                 model_id=model,
                 max_tokens=max_tokens,
@@ -72,6 +70,7 @@ def initialize_llm():
                 url=ibm_url,
             )
         case "ANTHROPIC":
+            from langchain_anthropic import ChatAnthropic
             return ChatAnthropic(
                 model_name=model,
                 max_tokens=max_tokens,
@@ -85,6 +84,7 @@ def initialize_llm():
                 stop=None,
             )
         case "OLLAMA":
+            from langchain_ollama import ChatOllama
             return ChatOllama(model=model)
         case _:
             raise ValueError("Invalid model provider")

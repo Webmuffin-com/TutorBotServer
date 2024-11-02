@@ -140,7 +140,7 @@ python3 -m pip freeze > requirements-unix.txt
 ### Windows
 
 ```bash
-python3 -m pip freeze > requirements-windows.txt --exclude uvloop
+python3 -m pip freeze > requirements-windows.txt --exclude enum34
 ```
 
 ## Contibutors
