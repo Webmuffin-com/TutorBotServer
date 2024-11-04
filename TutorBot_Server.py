@@ -292,7 +292,7 @@ async def load_conundrum_file(class_directory: str, file_name: str, request: Req
 
     try:
         # Load conundrum file
-        with open(conundrum_file_path, "r") as conundrum_file:
+        with open(conundrum_file_path, "r", encoding='utf-8') as conundrum_file:
             conundrum_content = conundrum_file.read()
 
         if len(conundrum_content) == 0:
@@ -311,7 +311,7 @@ async def load_conundrum_file(class_directory: str, file_name: str, request: Req
 
         # Load action plan file if it exists
         if os.path.exists(action_plan_file_path):
-            with open(action_plan_file_path, "r") as action_plan_file:
+            with open(action_plan_file_path, "r", encoding='utf-8') as action_plan_file:
                 logging.warning(
                     f"also loaded action_plan file {action_plan_file_path}",
                     extra={"sessionKey": session_key},
@@ -320,7 +320,7 @@ async def load_conundrum_file(class_directory: str, file_name: str, request: Req
 
         # Load scenario file if it exists
         if os.path.exists(scenario_file_path):
-            with open(scenario_file_path, "r") as scenario_file:
+            with open(scenario_file_path, "r", encoding='utf-8') as scenario_file:
                 logging.warning(
                     f"also loaded scenario file {scenario_file_path}",
                     extra={"sessionKey": session_key},
