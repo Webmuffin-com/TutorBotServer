@@ -1,12 +1,16 @@
 # -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import copy_metadata
+
+datas = [('static', 'static'),('classes', 'classes'),('env.txt', 'env.txt')]
+datas += copy_metadata('ibm-watsonx-ai')
 
 
 a = Analysis(
     ['TutorBot_Server.py'],
     pathex=[],
     binaries=[],
-    datas=[('static', 'static'), ('env.txt','env.txt')],
-    hiddenimports=['TutorBot_Server'],
+    datas=datas,
+    hiddenimports=['TutorBot_Server', 'pydantic.deprecated.decorator'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
