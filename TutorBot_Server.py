@@ -1,5 +1,6 @@
 import uuid
 import os
+import platform
 from fastapi import FastAPI, Request, Response, HTTPException, Depends
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -291,8 +292,9 @@ async def load_conundrum_file(class_directory: str, file_name: str, request: Req
         raise HTTPException(status_code=404, detail="Conundrum file not found")
 
     try:
+        encoding = 'utf-8' if platform.system() == 'Windows' else None  # None uses the default encoding in Linux
         # Load conundrum file
-        with open(conundrum_file_path, "r", encoding='utf-8') as conundrum_file:
+        with open(conundrum_file_path, "r", encoding=encoding) as conundrum_file:
             conundrum_content = conundrum_file.read()
 
         if len(conundrum_content) == 0:
@@ -304,6 +306,8 @@ async def load_conundrum_file(class_directory: str, file_name: str, request: Req
 
         session_cache.set_conundrum(conundrum_content)
 
+        logging.warning(f"Conundrum is {session_cache.m_conundrum}")
+
         logging.warning(
             f"Loaded conundrum file {conundrum_file_path}",
             extra={"sessionKey": session_key},
@@ -311,21 +315,29 @@ async def load_conundrum_file(class_directory: str, file_name: str, request: Req
 
         # Load action plan file if it exists
         if os.path.exists(action_plan_file_path):
-            with open(action_plan_file_path, "r", encoding='utf-8') as action_plan_file:
+            encoding = 'utf-8' if platform.system() == 'Windows' else None  # None uses the default encoding in Linux
+
+            with open(action_plan_file_path, "r", encoding=encoding) as action_plan_file:
                 logging.warning(
                     f"also loaded action_plan file {action_plan_file_path}",
                     extra={"sessionKey": session_key},
                 )
                 session_cache.set_action_plan(action_plan_file.read())
 
+                logging.warning(f"Action Plan is {session_cache.m_actionPlan}")
+
         # Load scenario file if it exists
         if os.path.exists(scenario_file_path):
-            with open(scenario_file_path, "r", encoding='utf-8') as scenario_file:
+            encoding = 'utf-8' if platform.system() == 'Windows' else None  # None uses the default encoding in Linux
+
+            with open(scenario_file_path, "r", encoding=encoding) as scenario_file:
                 logging.warning(
                     f"also loaded scenario file {scenario_file_path}",
                     extra={"sessionKey": session_key},
                 )
                 session_cache.set_scenario(scenario_file.read())
+
+                logging.warning(f"Scenario is {session_cache.m_scenario}")
 
         return JSONResponse(content={"message": "Conundrum file loaded successfully"})
 

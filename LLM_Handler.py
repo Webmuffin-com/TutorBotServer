@@ -170,6 +170,8 @@ async def invoke_llm(p_SessionCache: SessionCache, p_Request: str, p_sessionKey:
             extra={"sessionKey": p_sessionKey},
         )
 
+        logging.warning(f"Response to Client: ({EscapedXMLTags})")
+
         p_SessionCache.m_simpleCounterLLMConversation.add_message(
             "assistant", BotResponse, "LLM"
         )  # now we add the request.

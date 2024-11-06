@@ -86,9 +86,6 @@ textarea.user-input {
     flex-direction: column;
     gap: 10px;
     font-style: italic; /* This will italicize the text */
-    word-wrap: break-word; /* Older browsers */
-    overflow-wrap: break-word; /* Modern browsers */
-    white-space: pre-wrap; /* Maintains whitespace formatting and wraps text */
 }
 
 .user-message, .bot-message {
@@ -121,7 +118,7 @@ textarea.user-input {
 }
 
 .xml-output {
-    white-space: pre-wrap; /* Preserve whitespace and wrap long lines */
+    white-space: normal; /* Preserve whitespace and wrap long lines */
     word-wrap: break-word; /* Break long words if necessary */
     overflow-wrap: break-word; /* Ensures text stays inside the container */
 }
