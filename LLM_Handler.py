@@ -174,7 +174,7 @@ async def invoke_llm(p_SessionCache: SessionCache, p_Request: str, p_sessionKey:
         #logging.warning (f"RESPONSE html :{BotResponseHtml}")
 
         logging.warning(
-            f"RESPONSE FROM LLM: ({plain_text_response})\nSENT TO CLIENT ({EscapedXMLTags}).\n DETAILS ({llm_response})",
+            f"RESPONSE FROM LLM: ({plain_text_response})\n\n\nSENT TO CLIENT ({EscapedXMLTags}).\n\n\nRAW_LLM_OUTPUT ({BotResponse}).\n\n\nDETAILS ({llm_response})",
             extra={"sessionKey": p_sessionKey},
         )
 
