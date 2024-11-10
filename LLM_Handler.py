@@ -1,12 +1,11 @@
 import logging
 import re
-
-
 from bs4 import BeautifulSoup
-
 import DefaultParameters
 from Utilities import setup_csv_logging
 from SessionCache import SessionCache
+import markdown2
+import html
 
 from constants import (
     model_provider,
@@ -89,25 +88,28 @@ def initialize_llm():
         case _:
             raise ValueError("Invalid model provider")
 
-
 llm = initialize_llm()
 
+def convert_llm_output_to_html(llm_output):
+    """
+    Convert mixed Markdown, including code blocks and inline HTML, to safe HTML.
+    Was written by ChatGPT
+    :param llm_output: str, text output from LLM including Markdown and HTML tags.
+    :return: str, HTML formatted text.
+    """
+    # First, escape any raw HTML to avoid XSS attacks or unintended HTML rendering
+    # The markdown2 library will convert HTML tags inside markdown back to HTML
+    escaped_output = html.escape(llm_output)
 
-def escape_xml_within_pre_tags(text):
-    # This function finds all <pre>...</pre> blocks and escapes special XML characters within them
-    def escape_xml(match):
-        # Extract the content inside <pre>...</pre>
-        xml_content = match.group(1)
-        # Escape special characters in the XML content
-        escaped_content = (
-            xml_content.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-        )
-        # Return the reconstructed <pre>...</pre> with escaped content
-        return "<pre>" + escaped_content + "</pre>"
+    # Convert Markdown to HTML
+    # Note: safe_mode and extras can be adjusted based on your needs
+    html_output = markdown2.markdown(escaped_output, extras=["fenced-code-blocks", "safe-mode", "spoiler"])
 
-    # Use regex to apply the escaping function to all content within <pre>...</pre>
-    return re.sub(r"<pre>(.*?)</pre>", escape_xml, text, flags=re.DOTALL)
+    # Unescape only the intended HTML that is safe (You might need to customize this based on your context)
+    # This step assumes you have specific tags you want to allow directly from your LLM and are handled separately
+    final_html = html.unescape(html_output)
 
+    return final_html
 
 async def invoke_llm(p_SessionCache: SessionCache, p_Request: str, p_sessionKey: str):
     global LastResponse
@@ -134,7 +136,7 @@ async def invoke_llm(p_SessionCache: SessionCache, p_Request: str, p_sessionKey:
 
         # Test the messages structure before formatting
         logging.warning(
-            f"Messages structure: {messages}", extra={"sessionKey": p_sessionKey}
+            f"PROMPT ({messages})", extra={"sessionKey": p_sessionKey}
         )
 
         if llm is None:
@@ -163,14 +165,20 @@ async def invoke_llm(p_SessionCache: SessionCache, p_Request: str, p_sessionKey:
         soup = BeautifulSoup(BotResponse, "html.parser")
         plain_text_response = soup.get_text().replace("\n", " ").strip()
 
-        EscapedXMLTags = escape_xml_within_pre_tags(BotResponse)
+        EscapedXMLTags = convert_llm_output_to_html (BotResponse)
+
+        #logging.warning (f"RESPONSE start: {BotResponse}")
+        #EscapedXMLTags = escape_xml_within_pre_tags(BotResponse)
+        #logging.warning(f"RESPONSE CONVERTED: {EscapedXMLTags}")
+        #BotResponseHtml = markdown2.markdown(EscapedXMLTags)
+        #logging.warning (f"RESPONSE html :{BotResponseHtml}")
 
         logging.warning(
-            f"Response from LLM: ({plain_text_response})\n {BotResponse}. Details are ({llm_response})",
+            f"RESPONSE FROM LLM: ({plain_text_response})\nSENT TO CLIENT ({EscapedXMLTags}).\n DETAILS ({llm_response})",
             extra={"sessionKey": p_sessionKey},
         )
 
-        logging.warning(f"Response to Client: ({EscapedXMLTags})")
+     #   logging.warning(f"Response to Client: ({BotResponseHtml})")
 
         p_SessionCache.m_simpleCounterLLMConversation.add_message(
             "assistant", BotResponse, "LLM"

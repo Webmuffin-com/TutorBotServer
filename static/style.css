@@ -1,5 +1,12 @@
 @charset "UTF-8";
+
 /* CSS Document */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box; /* Ensures padding and border are included in the width/height */
+}
+
 html, body {
     height: 100%;
     margin: 0;
@@ -86,6 +93,9 @@ textarea.user-input {
     flex-direction: column;
     gap: 10px;
     font-style: italic; /* This will italicize the text */
+    word-wrap: break-word; /* Older browsers */
+    overflow-wrap: break-word; /* Modern browsers */
+    white-space: normal; /* Maintains whitespace formatting and wraps text */
 }
 
 .user-message, .bot-message {
@@ -117,10 +127,26 @@ textarea.user-input {
     font-style: italic; /* This will italicize the text */
 }
 
+p, h3, ol, li, h2, h1 {
+    margin-top: 5px; /* Remove top margin */
+    margin-bottom: 5px; /* Reduced bottom margin */
+    padding: 0; /* No additional padding */
+}
+
 .xml-output {
     white-space: normal; /* Preserve whitespace and wrap long lines */
     word-wrap: break-word; /* Break long words if necessary */
     overflow-wrap: break-word; /* Ensures text stays inside the container */
+}
+
+pre {
+    background-color: #f9f9f9;
+    padding: 10px;
+    border-radius: 5px;
+    color: #333;
+    white-space: pre-wrap; /* Maintains whitespace but wraps text */
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .parental-topic {
