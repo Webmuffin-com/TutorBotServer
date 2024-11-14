@@ -10,7 +10,7 @@ class SessionCache:
         self.m_data = data
         self.m_last_update = datetime.utcnow()
         self.m_simpleCounterLLMConversation = SimpleCounterLLMConversation()
-        self.m_conundrum = DefaultParameters.get_default_conundrum()
+        self.m_conundrum = None   #DefaultParameters.get_default_conundrum()
         self.m_scenario = DefaultParameters.get_default_scenario()
         self.m_actionPlan = DefaultParameters.get_default_action_plan()
 

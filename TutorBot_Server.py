@@ -152,6 +152,9 @@ async def generate_response(p_session_key, p_Request):
     sessionCache = session_manager.get_session(p_session_key)
 
     if sessionCache:
+        if not sessionCache.m_conundrum:
+            logging.warning (f"Session ({p_session_key}) did not specify Conundrum")
+            return "You must select a lesson to use this Bot"
         return await invoke_llm(sessionCache, p_Request, p_session_key)
     else:
         response = "Received unknown session key"
