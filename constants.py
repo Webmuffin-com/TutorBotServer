@@ -21,7 +21,7 @@ if not api_key and model_provider != "GOOGLE":
 
 max_tokens = typing.cast(int, os.getenv("MAX_TOKENS"))
 if not max_tokens:
-    max_tokens = None
+    max_tokens = 10000
 
 max_retries = typing.cast(int, os.getenv("MAX_RETRIES"))
 if not max_retries:

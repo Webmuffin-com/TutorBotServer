@@ -178,6 +178,6 @@ How to Respond:
 - If you respond with XML code snippets, use this format "Some Response text ```markdown <TOPIC>My Topic Information</TOPIC>```That is how its done"
 - I will be processing your response using the html.escape then markdown2.markdown then html.unescape.
 
-</ACTION_PLAN>    """
+</ACTION_PLAN>"""
 
     return prompt_parameter

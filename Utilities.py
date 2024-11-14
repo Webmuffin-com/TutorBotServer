@@ -117,6 +117,32 @@ class SimpleCounterLLMConversation:
                 ]  # Return only the content of the last assistant message
         return None  # Return None if no 'assistant' messages are found
 
+    def prune_oldest_pair(self):
+        """
+        Removes the oldest pair of user and assistant messages from the conversation.
+        This helps conserve space while keeping the conversation balanced.
+        """
+        user_index, assistant_index = None, None
+
+        # Find the indices of the oldest 'user' and 'assistant' messages
+        for i, message in enumerate(self.conversation):
+            if message["role"] == "user" and user_index is None:
+                user_index = i
+            elif message["role"] == "assistant" and assistant_index is None:
+                assistant_index = i
+            # Stop the loop if both indices are found
+            if user_index is not None and assistant_index is not None:
+                break
+
+        # Remove the oldest pair if both exist
+        if user_index is not None and assistant_index is not None:
+            # Remove the assistant message first if it comes before the user in the list
+            if assistant_index < user_index:
+                self.conversation.pop(assistant_index)
+                self.conversation.pop(user_index - 1)  # Adjust for shifted index
+            else:
+                self.conversation.pop(user_index)
+                self.conversation.pop(assistant_index - 1)  # Adjust for shifted index
 
 global_conversation = SimpleCounterLLMConversation()
 

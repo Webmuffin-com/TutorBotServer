@@ -223,11 +223,13 @@ async def invoke_llm(p_SessionCache: SessionCache, p_Request: str, p_sessionKey:
 
         BotResponse = str(llm_response.content)
 
+        token_usage = 0
+
         # Log token usage metrics
         if llm_response.response_metadata:
-            usage = llm_response.response_metadata.get("token_usage")
+            token_usage = llm_response.response_metadata.get("token_usage")
 
-            if usage:
+            if token_usage:
                 logging.info(
                     f"Tokens used - Prompt tokens: {usage.get('prompt_tokens')}, Completion tokens: \
             {usage.get('completion_tokens')}, Total tokens: {usage.get('total_tokens')}",
@@ -256,6 +258,10 @@ async def invoke_llm(p_SessionCache: SessionCache, p_Request: str, p_sessionKey:
         p_SessionCache.m_simpleCounterLLMConversation.add_message(
             "assistant", BotResponse, "LLM"
         )  # now we add the request.
+
+        if (token_usage > max_tokens):
+            logging.warning(f"Token usage ({token_usage}) exceeded Max Token ({max_tokens}).  Removing oldest part of user,attendant conversation")
+            p_SessionCache.m_simpleCounterLLMConversation.prune_oldest_pair()
 
         return EscapedXMLTags
 
