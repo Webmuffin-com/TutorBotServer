@@ -32,7 +32,7 @@ def initialize_llm():
             from langchain_openai import ChatOpenAI
             return ChatOpenAI(
                 model=model,
-                max_tokens=max_tokens,
+             #   max_tokens=max_tokens,
                 max_retries=max_retries,
                 timeout=timeout,
                 temperature=temperature,
@@ -45,7 +45,7 @@ def initialize_llm():
             from langchain_google_vertexai import ChatVertexAI
             return ChatVertexAI(
                 model_name=model,
-                max_tokens=max_tokens,
+            #    max_tokens=max_tokens,
                 max_retries=max_retries,
                 timeout=timeout,
                 temperature=temperature,
@@ -57,7 +57,7 @@ def initialize_llm():
             from langchain_ibm import ChatWatsonx
             return ChatWatsonx(
                 model_id=model,
-                max_tokens=max_tokens,
+            #    max_tokens=max_tokens,
                 max_retries=max_retries,
                 timeout=timeout,
                 temperature=temperature,
@@ -72,7 +72,7 @@ def initialize_llm():
             from langchain_anthropic import ChatAnthropic
             return ChatAnthropic(
                 model_name=model,
-                max_tokens=max_tokens,
+            #    max_tokens=max_tokens,
                 max_retries=max_retries,
                 timeout=timeout,
                 temperature=temperature,
@@ -223,16 +223,17 @@ async def invoke_llm(p_SessionCache: SessionCache, p_Request: str, p_sessionKey:
 
         BotResponse = str(llm_response.content)
 
-        token_usage = 0
+        current_token_usage = 0
 
         # Log token usage metrics
         if llm_response.response_metadata:
             token_usage = llm_response.response_metadata.get("token_usage")
 
             if token_usage:
+                current_token_usage = token_usage.get('prompt_tokens')
                 logging.info(
-                    f"Tokens used - Prompt tokens: {usage.get('prompt_tokens')}, Completion tokens: \
-            {usage.get('completion_tokens')}, Total tokens: {usage.get('total_tokens')}",
+                    f"Tokens used - Prompt tokens: {token_usage.get('prompt_tokens')}, Completion tokens: \
+            {token_usage.get('completion_tokens')}, Total tokens: {token_usage.get('total_tokens')}",
                     extra={"sessionKey": p_sessionKey},
                 )
 
@@ -259,7 +260,7 @@ async def invoke_llm(p_SessionCache: SessionCache, p_Request: str, p_sessionKey:
             "assistant", BotResponse, "LLM"
         )  # now we add the request.
 
-        if (token_usage > max_tokens):
+        if (current_token_usage > max_tokens):
             logging.warning(f"Token usage ({token_usage}) exceeded Max Token ({max_tokens}).  Removing oldest part of user,attendant conversation")
             p_SessionCache.m_simpleCounterLLMConversation.prune_oldest_pair()
 
