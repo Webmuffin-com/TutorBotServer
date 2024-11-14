@@ -9,39 +9,104 @@
 
 html, body {
     height: 100%;
+    width: 100%;
     margin: 0;
     padding: 0;
     font-family: Arial, sans-serif;
-}
-
-body {
     display: flex;
+    flex-direction: column;
+    align-items: center;
     justify-content: center;
     background-color: #004210;
-	color: white;
-    overflow-y: auto;
-}
+    color: #666;
+    overflow: hidden; /* Prevents extra scrolling */
+    }
+
+.header, .footer {
+	text-align: center;
+    padding: 20px;
+    width: 100%;
+	}
 
 .container {
     background-color: #ffffff;
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     padding: 20px;
-    width: 80%;
-    max-width: 1000px;
-    text-align: center;
+    width: 90vw; /* Responsive width */
+    height: 95vh; /* Take 95% of the viewport height */
+    max-width: 1200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start; /* Spread content vertically */
+    align-items: center;
+    overflow: hidden; /* Prevents extra scrolling */
+}
+
+.chat-area {
+    background-color: #ffffff;
+    border-radius: 10px;
+    width: 100%; /* Takes full width of the container */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Ensures no extra scrolling */
+    flex-grow: 1; /* Allows chat-area to grow with content */
+}
+
+.response-output {
+    width: 100%;
+    height: 60%; /* Takes up 60% of chat-area */
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    background-color: #f9f9f9;
+    color: black;
+    overflow-y: auto; /* Allows vertical scrolling */
     display: flex;
     flex-direction: column;
     flex-grow: 1;
-    margin-top: 20px;
+    word-wrap: break-word;
+    white-space: normal;
+    }
+
+.input-container {
+    display: flex;
+    width: 100%
+    align-items: center;
+    gap: 10px;
+    position: relative;
+}
+
+
+.user-message, .bot-message {
+    margin: 5px;
+    padding: 10px;
+    border-radius: 15px;
+    max-width: 80%;
+    word-wrap: break-word;
+    position: relative;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+
+.user-message {
+    color: #0000FF; /* Royal Blue */
+    background-color: #e6f7ff;
+    align-self: flex-end;
+    text-align: right;
+}
+
+.bot-message {
+    color: purple;
+    background-color: #f0f0f0;
+    align-self: flex-start;
+    text-align: left;
+    font-style: italic; /* This will italicize the text */
 }
 
 h1 {
     color: #333;
-}
-
-p {
-    color: #666;
 }
 
 button {
@@ -67,83 +132,36 @@ textarea.user-input {
     border: 1px solid #ccc;
     border-radius: 5px;
     overflow-y: auto;
+    font-size: 16px;
     resize: none; /* Disable manual resizing */
     height: 50px; /* Initial height */
 }
 
-.input-container {
-    display: flex;
-    align-items: center;
-    position: relative;
-}
 
-.response-output {
-    width: 100%;
-    padding: 10px;
-    margin: 10px 0;
-    box-sizing: border-box;
-    border: 1px solid #ccc;
-    border-radius: 10px;
-    min-height: 300px;
-    background-color: #f9f9f9;
-    color: black;
-    overflow-y: auto;
-    flex-grow: 1; /* Allow to grow and take available space */
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    font-style: italic; /* This will italicize the text */
-    word-wrap: break-word; /* Older browsers */
-    overflow-wrap: break-word; /* Modern browsers */
-    white-space: normal; /* Maintains whitespace formatting and wraps text */
-}
-
-.user-message, .bot-message {
-    margin: 5px 0;
-    padding: 10px;
-    border-radius: 15px;
-    max-width: 80%;
-    word-wrap: break-word;
-    position: relative;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    display: flex;
-    flex-direction: column;
-    box-sizing: border-box;
-    /*align-items: flex-end;*/
-}
-
-.user-message {
-    color: #0000FF; /* Royal Blue */
-    background-color: #e6f7ff;
-    align-self: flex-end;
-    text-align: right;
-}
-
-.bot-message {
-    color: Purple;
-    background-color: #f0f0f0;
-    align-self: flex-start;
-    text-align: left;
-    font-style: italic; /* This will italicize the text */
-}
-
-p, h3, ol, li, h2, h1 {
+p, h3, ol, ul, li, h2, h1 {
     margin-top: 5px; /* Remove top margin */
     margin-bottom: 5px; /* Reduced bottom margin */
     padding: 0; /* No additional padding */
+    white-space: normal;
 }
 
-.xml-output {
-    white-space: normal; /* Preserve whitespace and wrap long lines */
-    word-wrap: break-word; /* Break long words if necessary */
-    overflow-wrap: break-word; /* Ensures text stays inside the container */
+ol, ul {
+	margin-left: 30px;
+	}
+
+/* Center the footer */
+footer {
+    width: 90vh;
+    max-width: 1200px;
+    text-align: center;
+    margin-top: 10px;
 }
 
 pre {
     background-color: #f9f9f9;
     padding: 10px;
     border-radius: 5px;
-    color: #333;
+    color: green;
     white-space: pre-wrap; /* Maintains whitespace but wraps text */
     word-wrap: break-word;
     overflow-wrap: break-word;
@@ -269,6 +287,7 @@ pre {
     font-size: 0.8em;
     color: #999;
     align-self: flex-end;
+    margin-left: 10px;
 }
 
 select {
@@ -285,6 +304,10 @@ select {
 select:hover {
     background-color: #e6e6e6;
 }
+
+.thinkingIndicator {
+	margin-right: 10px;
+	}
 
 /* Loader styles */
 .loader {
@@ -305,5 +328,3 @@ select:hover {
         transform: rotate(360deg);
     }
 }
-
-

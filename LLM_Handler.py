@@ -91,29 +91,102 @@ def initialize_llm():
 llm = initialize_llm()
 
 def convert_llm_output_to_html(llm_output):
+    logging.warning(f"BEFORE {llm_output}")
+    # First, escape any raw HTML to avoid XSS attacks or unintended HTML rendering
+    # The markdown2 library will convert HTML tags inside markdown back to HTML
+    escaped_output = html.escape(llm_output)
+
+    logging.warning(f"ESCAPED OUTPUT....{escaped_output}")
+
+    # Convert Markdown to HTML
+    # Note: safe_mode and extras can be adjusted based on your needs
+    html_output = markdown2.markdown(escaped_output, extras=["fenced-code-blocks", "safe-mode", "spoiler"])
+    #html_output = escaped_output
+    logging.warning(f"HTML OUTPUT....{html_output}")
+
+    # Unescape only the intended HTML that is safe (You might need to customize this based on your context)
+    # This step assumes you have specific tags you want to allow directly from your LLM and are handled separately
+    final_html = html.unescape(html_output)
+    #final_html = html_output
+
+    logging.warning(f"FINAL OUTPUT....{final_html}")
+
+    return final_html
+
+
+def convert_llm_output_to_html_old(llm_output):
+    # test text that cause problems with formatting code.
+    llm_output1 = f"""<SCENARIO> 
+        You are creating a prompt for university professors in a business school who are familiar with their domains but lack experience incorporating AI into their teaching. Your task is to guide them in crafting a prompt for their own AI-driven teaching assistant.
+
+        <PERSONALITY>
+            You are an AI tutor who is patient, clear, and concise. You will help the professors by providing step-by-step guidance on using AI in their classes. You are approachable and professional.
+        </PERSONALITY>
+
+        <PERMISSION> You can discuss anything related to AI prompt design for educational purposes. </PERMISSION>
+
+        <RESTRICTION> You are not allowed to discuss specific cultural or political topics unrelated to AI or business education. </RESTRICTION>
+    </SCENARIO>
+
+    <CONUNDRUM>
+        <TOPIC name=""AI in Business Education"">
+            <DESCRIPTION> This section provides content to help professors enhance their teaching with AI, such as using AI to generate case studies, simulate business scenarios, and automate grading. </DESCRIPTION>
+
+            <TOPIC name=""AI-Assisted Case Studies"">
+                <DESCRIPTION> AI can generate case studies based on real-world data. Professors can provide parameters such as industry, company size, and market conditions, and the AI will generate a relevant scenario for students to solve. </DESCRIPTION>
+            </TOPIC>
+
+            <TOPIC name=""Simulating Business Scenarios"">
+                <DESCRIPTION> Professors can use AI to simulate dynamic business environments where students must react to market changes, manage resources, and make strategic decisions. </DESCRIPTION>
+            </TOPIC>
+
+            <TOPIC name=""Automated Grading"">
+                <DESCRIPTION> AI can automate grading for certain assignments like multiple-choice quizzes or coding assignments, providing feedback to students in real-time. </DESCRIPTION>
+            </TOPIC>
+        </TOPIC>
+    </CONUNDRUM>
+
+    <ACTION_PLAN>
+        <Tactics>
+            <EXAMPLE> Help the professor identify the specific task they want the AI to assist with, such as generating a case study or simulating a business scenario. </EXAMPLE>
+            <EXAMPLE> Once the task is identified, ask the professor to provide specific parameters for the AI to use. For example, if generating a case study, ask for industry, company size, and relevant market conditions. </EXAMPLE>
+            <EXAMPLE> Ensure the professor understands how the AI will respond based on the provided input. Use clear, direct language when explaining the process. </EXAMPLE>
+            <EXAMPLE> Encourage the professor to refine the prompt with additional details if necessary, such as student learning objectives or the desired complexity of the scenario. </EXAMPLE>
+        </Tactics>
+    </ACTION_PLAN>)"""
+
     """
     Convert mixed Markdown, including code blocks and inline HTML, to safe HTML.
     Was written by ChatGPT
     :param llm_output: str, text output from LLM including Markdown and HTML tags.
     :return: str, HTML formatted text.
     """
+    logging.warning (f"BEFORE {llm_output}")
     # First, escape any raw HTML to avoid XSS attacks or unintended HTML rendering
     # The markdown2 library will convert HTML tags inside markdown back to HTML
     escaped_output = html.escape(llm_output)
 
+    logging.warning(f"ESCAPED OUTPUT....{escaped_output}")
+
     # Convert Markdown to HTML
     # Note: safe_mode and extras can be adjusted based on your needs
-    html_output = markdown2.markdown(escaped_output, extras=["fenced-code-blocks", "safe-mode", "spoiler"])
+   #html_output = markdown2.markdown(escaped_output, extras=["fenced-code-blocks", "safe-mode", "spoiler"])
+    html_output = escaped_output
+    #logging.warning(f"HTML OUTPUT....{html_output}")
 
     # Unescape only the intended HTML that is safe (You might need to customize this based on your context)
     # This step assumes you have specific tags you want to allow directly from your LLM and are handled separately
-    final_html = html.unescape(html_output)
+  # final_html = html.unescape(html_output)
+    final_html = html_output
+
+ #   logging.warning(f"FINAL OUTPUT....{final_html}")
 
     return final_html
 
 async def invoke_llm(p_SessionCache: SessionCache, p_Request: str, p_sessionKey: str):
     global LastResponse
     try:
+
         scenerio = DefaultParameters.get_default_scenario()
         conundrum = p_SessionCache.get_conundrum()
 
@@ -174,7 +247,7 @@ async def invoke_llm(p_SessionCache: SessionCache, p_Request: str, p_sessionKey:
         #logging.warning (f"RESPONSE html :{BotResponseHtml}")
 
         logging.warning(
-            f"RESPONSE FROM LLM: ({plain_text_response})\n\n\nSENT TO CLIENT ({EscapedXMLTags}).\n\n\nRAW_LLM_OUTPUT ({BotResponse}).\n\n\nDETAILS ({llm_response})",
+            f"RESPONSE FROM LLM Cleaned: ({plain_text_response})\n\n\nSENT TO CLIENT ({EscapedXMLTags}).\n\n\nRAW_LLM_OUTPUT ({BotResponse}).\n\n\nDETAILS ({llm_response})",
             extra={"sessionKey": p_sessionKey},
         )
 
@@ -195,6 +268,6 @@ async def invoke_llm(p_SessionCache: SessionCache, p_Request: str, p_sessionKey:
         )
         return f"An error ({e}) occurred processing your request, Please try again"
 
-
 if __name__ == "__main__":
     setup_csv_logging()
+

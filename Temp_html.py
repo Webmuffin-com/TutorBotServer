@@ -8,10 +8,9 @@ def temp_html_v5():
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <!-- Main container for the application -->
+
     <div class="container">
-        <!-- Header section with title and instructions -->
-        <div class="header">
+        <div class="header">        <!-- Header section with title and instructions -->
             <h1>TutorBot Learning Center</h1>
             <p>Select your class from the dropdown below and then select the lesson you would like to work on.</p>
             <br>
@@ -30,25 +29,23 @@ def temp_html_v5():
                 <p id="lessonNameDisplay">No lesson loaded</p>
             </div>
         </div>
-        <br>
-        <br>
         <!-- Chat area for interaction -->
         <div class="chat-area">
             <label for="responseOutput">Response:</label>
             <div id="responseOutput" class="response-output"></div>
-
             <label for="userInput">Request:</label>
             <div class="input-container">
                 <!-- Loading indicator -->
                 <div id="thinkingIndicator" class="loader" style="display: none;"></div>
                 <textarea id="userInput" class="user-input"></textarea>
             </div>
+        </div>
+    </div>
+        <footer>
             <!-- Send button for submitting requests -->
             <button id="sendButton">Send</button>
             <button id="copyButton">Copy</button>
-
-        </div>
-    </div>
+        </footer>
 
     <!-- Scripts for dynamic behavior and data fetching -->
     <script>
