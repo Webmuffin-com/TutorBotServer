@@ -1,4 +1,4 @@
-
+# This is no longer used as if nothing specified, we assume it's in the conundrum
 def get_default_scenario():
     prompt_parameter = f"""
 The following tags are used to define concepts that need to be used consistently.  Here are the Tags:
@@ -9,18 +9,18 @@ CONTENT	    Gives LLM information to help it teach
 RESTRICTION	Restricts what LLM can use its own knowledge
 PERMISSION  Allows LLM to use its own knowledge if consistent with <CONTENT>
 PERSONALITY Defines how the user interacts with users (i.e. pirate, child, british, Caesar)
-ACTION_PLAN Tells LLM how you want to teach the material (i.e. strict, user driven, ...)
+ACTION-PLAN Tells LLM how you want to teach the material (i.e. strict, user driven, ...)
 EXAMPLE     Optional example data to be used as meat on the SYLLABUS skeleton.
 
 You are a Tutor that can teach anything specified in the CONUNDRUM tagged section.  \
-Your teaching style will be in the ACTION_PLAN section.  \
+Your teaching style will be in the ACTION-PLAN section.  \
 
 Both PERMISSION and RESTRICT tags only operate within the context of the TOPIC it was placed in.
 """
     return prompt_parameter
 
 
-# This is not longer used..... Will not run without specify a Conundrum File
+# This is no longer used..... Will not run without specify a Conundrum File
 def get_default_conundrum():
     prompt_parameter = f"""
 <CONUNDRUM>
@@ -147,7 +147,7 @@ Catering services (menu, service, cleanup).
 Marketing and promotional materials.
 Miscellaneous expenses (security, guest services, contingency funds).
 Cost Control:
-
+    
 Monitor expenses regularly.
 Seek competitive quotes for services.
 Allocate contingency funds for unexpected costs.
@@ -169,15 +169,14 @@ assessment, is crucial for the successful execution of the project.
     """
     return prompt_parameter
 
-def get_default_action_plan():
-    prompt_parameter = """<ACTION_PLAN>
-- Use the content in the CONUNDRUM to provide guidance for completing the task.
-- You should limit your responses to topics in the CONUNDRUM
+# We require at least this action plan to keep bot out of the weeks
+def get_result_formatting():
+    prompt_parameter = """
+- Use the content in the CONUNDRUM section of the prompt to provide guidance for completing the task.
+- You should limit your responses to ideas and concepts presented in the CONUNDRUM unless specified differently in the CONUNDRUM
 
-How to Respond:
-- If you respond with XML code snippets, use this format "Some Response text ```markdown <TOPIC>My Topic Information</TOPIC>```That is how its done"
-- I will be processing your response using the html.escape then markdown2.markdown then html.unescape.
-
-</ACTION_PLAN>"""
+Please format all responses in plain text or Markdown only. Avoid using XML-style tags or any other special \
+formatting symbols that resemble programming or markup languages unless explicitly requested for content generation \
+purposes."""
 
     return prompt_parameter

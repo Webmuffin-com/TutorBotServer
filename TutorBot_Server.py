@@ -10,8 +10,7 @@ from starlette.middleware.cors import CORSMiddleware
 import uvicorn
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
-from SessionCache import SessionCacheManager
-
+from SessionCache import SessionCacheManager, SessionCache
 
 # Load environmental variables file from env.txt
 load_dotenv("env.txt")
@@ -21,7 +20,6 @@ import logging  # noqa: E402
 from Utilities import setup_csv_logging  # noqa: E402
 from LLM_Handler import invoke_llm  # noqa: E402
 from Temp_html import temp_html_v5  # noqa: E402
-
 
 setup_csv_logging()
 
@@ -309,13 +307,12 @@ async def load_conundrum_file(class_directory: str, file_name: str, request: Req
 
         session_cache.set_conundrum(conundrum_content)
 
-        logging.warning(f"Conundrum is {session_cache.m_conundrum}")
-
         logging.warning(
             f"Loaded conundrum file {conundrum_file_path}",
             extra={"sessionKey": session_key},
         )
-
+        # we no longer default the action plan... just append a response formatter to it if it exists
+        # session_cache.set_action_plan(get_default_action_plan())
         # Load action plan file if it exists
         if os.path.exists(action_plan_file_path):
             encoding = 'utf-8' if platform.system() == 'Windows' else None  # None uses the default encoding in Linux
@@ -329,6 +326,7 @@ async def load_conundrum_file(class_directory: str, file_name: str, request: Req
 
                 logging.warning(f"Action Plan is {session_cache.m_actionPlan}")
 
+        session_cache.set_scenario(None)
         # Load scenario file if it exists
         if os.path.exists(scenario_file_path):
             encoding = 'utf-8' if platform.system() == 'Windows' else None  # None uses the default encoding in Linux
@@ -341,6 +339,8 @@ async def load_conundrum_file(class_directory: str, file_name: str, request: Req
                 session_cache.set_scenario(scenario_file.read())
 
                 logging.warning(f"Scenario is {session_cache.m_scenario}")
+
+        session_cache.m_simpleCounterLLMConversation.clear()
 
         return JSONResponse(content={"message": "Conundrum file loaded successfully"})
 

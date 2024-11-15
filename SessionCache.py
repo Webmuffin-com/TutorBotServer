@@ -11,8 +11,8 @@ class SessionCache:
         self.m_last_update = datetime.utcnow()
         self.m_simpleCounterLLMConversation = SimpleCounterLLMConversation()
         self.m_conundrum = None   #DefaultParameters.get_default_conundrum()
-        self.m_scenario = DefaultParameters.get_default_scenario()
-        self.m_actionPlan = DefaultParameters.get_default_action_plan()
+        self.m_scenario = None    #DefaultParameters.get_default_scenario()
+        self.m_actionPlan = None  #DefaultParameters.get_default_action_plan()
 
     def update(self, data: dict):
         self.m_data.update(data)
