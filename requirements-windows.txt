@@ -51,6 +51,7 @@ langchain-ollama==0.2.0
 langchain-openai==0.2.5
 langsmith==0.1.139
 lomond==0.3.3
+markdown2==2.5.1
 MarkupSafe==3.0.2
 numpy==1.26.4
 ollama==0.3.3

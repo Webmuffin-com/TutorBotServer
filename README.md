@@ -26,7 +26,7 @@ In order to set the required secrets you need to duplicate the file `env.example
 - Provision a virtual environment, create one using the following command:
 
 ```bash
-python3 -m venv .venv
+python -m venv .venv
 ```
 
 - Activate the virtual environment you just provisioned using the command:
@@ -40,7 +40,7 @@ source .venv/bin/activate
 - Provision a virtual environment, create one using the following command:
 
 ```bash
-python3 -m venv .venv
+python -m venv .venv
 ```
 
 - Activate the virtual environment you just provisioned using the command:
@@ -72,7 +72,7 @@ Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
 - Install the dependencies running the command:
 
 ```bash
-python3 -m pip install -r ./requirements-unix.txt
+python -m pip install -r ./requirements-unix.txt
 ```
 
 #### Windows
@@ -80,7 +80,7 @@ python3 -m pip install -r ./requirements-unix.txt
 - Install the dependencies running the command:
 
 ```bash
-python3 -m pip install -r ./requirements-windows.txt
+python -m pip install -r ./requirements-windows.txt
 ```
 
 ## Run the TutorBot_Server Development Server
@@ -94,7 +94,7 @@ In order to run the development server follow this steps:
 - Test the application by running the command:
 
 ```bash
-python3 ./TutorBot_Server.py
+python ./TutorBot_Server.py
 ```
 
 - Test the application by opening the url: `http://localhost:8000`
@@ -134,13 +134,13 @@ There are two requirements files for windows and unix based systems, every time 
 ### MacOS / Unix
 
 ```bash
-python3 -m pip freeze > requirements-unix.txt
+python -m pip freeze > requirements-unix.txt
 ```
 
 ### Windows
 
 ```bash
-python3 -m pip freeze > requirements-windows.txt --exclude enum34
+python -m pip freeze > requirements-windows.txt --exclude enum34
 ```
 
 ## Contibutors
