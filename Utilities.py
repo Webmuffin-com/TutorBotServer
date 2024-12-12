@@ -1,150 +1,232 @@
-import logging
-import os
-import json
+from copy import deepcopy
 from datetime import datetime
+from fastapi import HTTPException
+import requests
+from weasyprint import HTML
+import logging
+import nh3
+import os
 
 
-class SimpleCounterLLMConversation:
-    def __init__(self):
-        self.conversation = []
-        self.message_id_counter = 1  # Initialize message ID counter
+from constants import (
+    classes_directory,
+    mailgun_api_url,
+    mailgun_api_key,
+    mailgun_from_address,
+    encoding,
+)
 
-    def add_message(self, role, content, participant_id=None):
-        """
-        Adds a message to the conversation with a timestamp and a simple incremental ID.
-        :param role: The role of the message sender ('user' or 'assistant').
-        :param content: The content of the message.
-        :param participant_id: An optional identifier for the participant.
-        """
-        message = {
-            "id": self.message_id_counter,
-            "timestamp": datetime.now().isoformat(),
-            "role": role,
-            "content": content,
-            "participant_id": participant_id or "default",
-        }
-        self.conversation.append(message)
-        self.message_id_counter += 1  # Increment the counter for the next message
-        # Reset counter if it's too high; adjust this limit as needed
-        if self.message_id_counter > 1e9:
-            self.message_id_counter = 1
+from SessionCache import SimpleCounterLLMConversation, session_manager
 
-    def clear(self):
-        """
-        Clears the conversation and resets the message ID counter.
-        """
-        self.conversation.clear()
-        self.message_id_counter = 1  # Reset counter
 
-    def to_string(self):
-        """
-        Converts the conversation to a string in a format suitable for the LLM.
-        """
-        return json.dumps({"messages": self.conversation}, indent=2)
+def get_conundrum(class_directory: str, conundrum_file_name: str, session_key: str):
+    """
+    Get the conundrum from a file.
+    """
 
-    def to_conversation(self):
-        """
-        Outputs the conversation in a simplified format, focusing on 'role' and 'content'.
-        """
-        return json.dumps(
-            [
-                {"role": msg["role"], "content": msg["content"]}
-                for msg in self.conversation
-            ],
-            indent=2,
+    conundrum_file_path = os.path.join(
+        classes_directory, class_directory, "conundrums", conundrum_file_name
+    )
+    conundrum_file_path = os.path.normpath(conundrum_file_path)
+
+    if not os.path.exists(conundrum_file_path):
+        logging.warning(
+            f"Failed to locate file {conundrum_file_path}",
+            extra={"sessionKey": session_key},
+        )
+        raise HTTPException(status_code=404, detail="Conundrum file not found")
+
+    # Load conundrum file
+    with open(conundrum_file_path, "r", encoding=encoding) as conundrum_file:
+        conundrum_content = conundrum_file.read()
+
+        if len(conundrum_content) == 0:
+            logging.warning(
+                f"conundrum file {conundrum_file_path} is empty.",
+                extra={"sessionKey": session_key},
+            )
+            raise HTTPException(status_code=404, detail="Conundrum file was empty")
+
+        logging.warning(
+            f"Loaded conundrum file {conundrum_file_path}",
+            extra={"sessionKey": session_key},
         )
 
-    def get_history(self):
-        """
-        Retrieves the conversation history.
-        :return: A copy of the conversation history.
-        """
-        return list(self.conversation)
+        return conundrum_content
 
-    def __str__(self):
-        """
-        String representation of the conversation history.
-        """
-        return self.to_string()
 
-    def __repr__(self):
-        """
-        Provides a detailed representation of the conversation for debugging.
-        """
-        conversation_preview = ", ".join(
-            f"{msg['role']}: {msg['content'][:30]}..." for msg in self.conversation[:5]
+def get_action_plan(class_directory: str, action_plan_file_path: str, session_key: str):
+    """
+    Get the action plan from a file.
+    """
+
+    action_plan_file_path = os.path.join(
+        classes_directory, class_directory, "actionplans", action_plan_file_path
+    )
+    action_plan_file_path = os.path.normpath(action_plan_file_path)
+
+    if not os.path.exists(action_plan_file_path):
+        logging.warning(
+            f"Failed to locate file {action_plan_file_path}",
+            extra={"sessionKey": session_key},
         )
-        return (
-            f"<SimpleCounterLLMConversation (Last 5 Messages): {conversation_preview}>"
+        raise HTTPException(status_code=404, detail="Action plan file not found")
+
+    # Load action_plan file
+    with open(action_plan_file_path, "r", encoding=encoding) as action_plan_file:
+        action_plan_content = action_plan_file.read()
+
+        if len(action_plan_content) == 0:
+            logging.warning(
+                f"Action plan file {action_plan_file_path} is empty.",
+                extra={"sessionKey": session_key},
+            )
+            raise HTTPException(status_code=404, detail="Action plan file was empty")
+
+        logging.warning(
+            f"Loaded action plan file {action_plan_file_path}",
+            extra={"sessionKey": session_key},
         )
 
-    def get_all_previous_messages(self):
-        """
-        Retrieves all messages from the conversation.
-        Returns:
-            A list of dictionaries, each containing the role and content of each message in the conversation.
-        """
-        return [(message["role"], message["content"]) for message in self.conversation]
+        return action_plan_content
 
-    def __iter__(self):
-        """
-        Returns an iterator over a snapshot of the conversation list.
-        """
-        return iter(self.conversation.copy())
 
-    def get_user_questions_as_string(self):
-        """
-        Retrieves all user questions and concatenates them into a single string.
-        Returns:
-            A string containing all user questions separated by a space.
-        """
-        # Filter for messages where the role is 'user' and concatenate the content
-        user_questions = " ".join(
-            msg["content"] for msg in self.conversation if msg["role"] == "user"
+def convert_llm_output_to_html(llm_output):
+    logging.warning(
+        f"LLM OUTPUT =========================================\n{llm_output}"
+    )
+    attributes = deepcopy(nh3.ALLOWED_ATTRIBUTES)
+    attributes["div"] = set()
+
+    attributes["div"].add("class")
+
+    print(attributes)
+    clean_html = nh3.clean(llm_output, attributes=attributes)
+
+    logging.warning(
+        f"CLEAN HTML SANITIZED BY NH3 =========================================\n{clean_html}"
+    )
+
+    final_html = clean_html
+
+    logging.warning(
+        f"FINAL OUTPUT =========================================\n{final_html}"
+    )
+
+    return final_html
+
+
+def format_conversation(conversation):
+    """
+    Format a conversation for sending by email.
+    """
+
+    user_message = """<div class="user-message"><h2 class="message-text">User: </h2><p>{user_input}</p></div>"""
+    assistant_message = """<div class="bot-message"><h2 class="message-text">Bot:</h2>{assistant_response}</div>"""
+
+    messages = []
+
+    for message in conversation:
+        role = message[0]
+        content = message[1]
+
+        if role == "user":
+            messages.append(user_message.format(user_input=content))
+        elif role == "assistant":
+            EscapedXMLTags = convert_llm_output_to_html(content)
+
+            messages.append(assistant_message.format(assistant_response=EscapedXMLTags))
+
+    return messages
+
+
+def generate_conversation_pdf(
+    session_key: str | None,
+    class_name: str | None,
+    lesson: str | None,
+    action_plan: str | None,
+):
+
+    if session_key is None:
+        raise HTTPException(status_code=404, detail="Session Key not found")
+
+    session_cache = session_manager.get_session(session_key)
+
+    if session_cache is None:
+        raise HTTPException(status_code=404, detail="Could not locate Session Key")
+
+    conversation = (
+        session_cache.m_simpleCounterLLMConversation.get_all_previous_messages()
+    )
+
+    formatted_conversation = format_conversation(conversation)
+
+    print(f"Conversation: {formatted_conversation}")
+
+    with open("static/style-pdf.css", "r", encoding=encoding) as style_file:
+
+        style = style_file.read()
+
+        html_content = """
+        <html>
+            <head>
+                <style type="text/css">
+                    {style}
+                </style>
+            </head>
+            <body>
+                <div class="response-output-pdf">
+                    <div class="header">
+                        <h1>TutorBot Learning Center</h1>
+                        <p>This document contains the conversation you had with the TutorBot.</p>
+                        <p>Class: {class_name}    Lesson: {lesson}    Mode: {action_plan}.</p>
+                    </div>
+                    {formatted_conversation}
+                </div>
+            </body>
+        </html>""".format(
+            style=style,
+            class_name=class_name,
+            lesson=lesson,
+            action_plan=action_plan,
+            formatted_conversation="".join(formatted_conversation),
         )
-        return user_questions
 
-    def get_last_assistance_response(self):
-        """
-        Returns the content of the last message in the conversation where the role is 'assistant'.
-        Returns None if there are no assistant messages in the conversation.
-        """
-        # Iterate backwards through the conversation to find the last 'assistant' message and return only its content
-        for message in reversed(self.conversation):
-            if message["role"] == "assistant":
-                return message[
-                    "content"
-                ]  # Return only the content of the last assistant message
-        return None  # Return None if no 'assistant' messages are found
+        print(f"HTML Content: {html_content}")
 
-    def prune_oldest_pair(self):
-        """
-        Removes the oldest pair of user and assistant messages from the conversation.
-        This helps conserve space while keeping the conversation balanced.
-        """
-        user_index, assistant_index = None, None
+        pdf = HTML(string=html_content).write_pdf()
 
-        # Find the indices of the oldest 'user' and 'assistant' messages
-        for i, message in enumerate(self.conversation):
-            if message["role"] == "user" and user_index is None:
-                user_index = i
-            elif message["role"] == "assistant" and assistant_index is None:
-                assistant_index = i
-            # Stop the loop if both indices are found
-            if user_index is not None and assistant_index is not None:
-                break
+        return pdf
 
-        # Remove the oldest pair if both exist
-        if user_index is not None and assistant_index is not None:
-            # Remove the assistant message first if it comes before the user in the list
-            if assistant_index < user_index:
-                self.conversation.pop(assistant_index)
-                self.conversation.pop(user_index - 1)  # Adjust for shifted index
-            else:
-                self.conversation.pop(user_index)
-                self.conversation.pop(assistant_index - 1)  # Adjust for shifted index
 
-global_conversation = SimpleCounterLLMConversation()
+def send_email(
+    to_address: str, subject: str, html: str, attachments: list[tuple[str, str]] = []
+):
+    try:
+        files = files = [("attachment", attachment) for attachment in attachments]
+
+        response = requests.post(
+            mailgun_api_url,
+            auth=("api", mailgun_api_key),
+            files=files,
+            data={
+                "from": mailgun_from_address,
+                "to": to_address,
+                "subject": subject,
+                "html": html,
+            },
+        )
+
+        if response.status_code == 200:
+            # success
+            logging.info(
+                f"Successfully sent an email to '{to_address}' via Mailgun API."
+            )
+        else:
+            # error
+            logging.error(f"Could not send the email, reason: {response.text}")
+    except Exception as ex:
+        logging.exception(f"Mailgun error: {ex}")
 
 
 def generate_log_filename(prefix="logs/TutorBot_Log", extension="csv"):
@@ -271,6 +353,10 @@ def main():
 
     convo.clear()
     print("After clearing:", convo)
+
+
+def bytes_to_binary_string(bytes_data):
+    return "".join(f"{byte:08b}" for byte in bytes_data)
 
 
 if __name__ == "__main__":

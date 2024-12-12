@@ -1,0 +1,38 @@
+@charset "UTF-8";
+
+@page {
+	size: Letter; /* Change from the default size of A4 */
+	margin: 1cm 1cm; /* Set margin on each page */
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+	font-family: Helvetica, Arial, sans-serif;
+	font-size: 3.5mm;
+	line-height: 5mm;
+	color: #303030;
+}
+
+.header {
+	text-align: center;
+	width: 100%;
+}
+
+.user-message,
+.bot-message {
+	padding: 3mm 5mm;
+	margin: 7mm 0;
+	border-radius: 3mm;
+}
+
+.user-message {
+	color: #0000ff;
+	border: 0.5mm solid #0000ff;
+}
+
+.bot-message {
+	color: purple;
+	border: 0.5mm solid purple;
+}

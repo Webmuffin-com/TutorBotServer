@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Teaching Chatbot</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="header"> <!-- Header section with title and instructions -->
+            <h1>TutorBot Learning Center</h1>
+            <p>Select your class from the dropdown below and then select the lesson you would like to work on.</p>
+            <br>
+            <!-- Dropdowns for selecting class and lesson -->
+            <div>
+
+                <label for="classDropdown">Class:</label>
+                <select id="classDropdown">
+                    <option value="">
+                        Select a class
+                    </option>
+                </select>
+
+                <label for="lessonDropdown">
+                    Lesson:
+                </label>
+                <select id="lessonDropdown">
+                    <option value="">
+                        Select a lesson
+                    </option>
+                </select>
+
+                <label for="actionPlanDropdown">
+                    Mode:
+                </label>
+                <select id="actionPlanDropdown">
+                    <option value="">
+                        Select a action plan
+                    </option>
+                </select>
+            </div>
+        </div>
+        <!-- Chat area for interaction -->
+        <div class="chat-area">
+            <label for="responseOutput">
+                Response:
+            </label>
+            <div id="responseOutput" class="response-output"></div>
+            <label for="userInput">
+                Request:
+            </label>
+            <div class="input-container">
+                <!-- Loading indicator -->
+                <div id="thinkingIndicator" class="loader" style="display: none;"></div>
+                <textarea id="userInput" class="user-input"></textarea>
+                <button id="sendButton">Send</button>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <!-- Send button for submitting requests -->
+
+        <button id="copyButton">Copy Conversation</button><button id="requestConversationDownload">Download Conversation</button>
+        <button id="requestConversation">Send Conversation</button>
+    </footer>
+
+    <!-- DIALOG -->
+
+    <dialog>
+        <label for="email">Email:</label>
+        <input id="email" autofocus name="email" type="text" class="user-input" placeholder="Enter your email" required>
+
+        <br />
+
+        <div style="display: flex; gap: 1rem;">
+
+            <button id="requestConversationEmail">Send</button>
+            <button id="closeDialog">Close</button>
+        </div>
+
+        <p id="submissionStatus"></p>
+    </dialog>
+
+    <!-- Scripts for dynamic behavior and data fetching -->
+    <script>
+        // Base URL of the application
+        const baseURL = window.location.origin;
+        // Variable to track selected class ID for requests
+        let selectedClassId = null;
+
+        // Event listener to initialize the application once the DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Initializing application...');
+            initializeApp();
+        });
+
+        // Function to initialize the application
+        function initializeApp() {
+            setCookie() // Set a session cookie
+                .then(fetchClasses) // Fetch available classes after setting the cookie
+                .catch(error => console.error('Initialization error:', error)); // Log any initialization errors
+            addEventListeners(); // Add event listeners for user interactions
+        }
+
+        // Function to set a session cookie
+        async function setCookie() {
+            try {
+                const response = await fetch(`${baseURL}/set-cookie/`, {
+                    method: 'GET',
+                    credentials: 'include' // Include credentials (cookies) in the request
+                });
+                if (!response.ok) throw new Error(`Failed to set cookie: ${response.statusText}`);
+                const data = await response.json();
+                console.log('Cookie set:', data.message); // Log the response message
+            } catch (error) {
+                console.error('Error setting cookie:', error); // Log any errors that occur
+                throw error; // Rethrow the error to be caught in the promise chain
+            }
+        }
+
+        // Function to fetch available classes from the server
+        async function fetchClasses() {
+            try {
+                console.log('Fetching classes...');
+                const response = await fetch(`${baseURL}/classes/`, {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                if (!response.ok) throw new Error(`Failed to fetch classes: ${response.statusText}`);
+                const data = await response.json();
+                console.log('Classes fetched:', data); // Log the fetched data
+                data.directories.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase())); // Sort lessons alphabetically (case-insensitive)
+                populateDropdown('classDropdown', data.directories, 'Select a class'); // Populate the class dropdown with fetched data
+            } catch (error) {
+                console.error('Error fetching classes:', error); // Log any errors that occur
+            }
+        }
+
+        // Function to fetch lessons based on the selected class
+        async function fetchClassConfiguration() {
+            try {
+                const lessonDropdown = document.getElementById('lessonDropdown');
+                lessonDropdown.innerHTML = '<option value="">Select a lesson</option>'; // Clear the lesson dropdown
+
+                const actionPlanDropdown = document.getElementById('actionPlanDropdown');
+                actionPlanDropdown.innerHTML = '<option value="">Select a action plan</option>'; // Clear the lesson dropdown
+
+                if (selectedClassId) {
+                    const response = await fetch(`${baseURL}/classes/${selectedClassId}`, {
+                        method: 'GET',
+                        credentials: 'include'
+                    });
+                    if (!response.ok) throw new Error(`Failed to fetch lessons: ${response.statusText}`);
+                    const data = await response.json();
+                    console.log('Lessons fetched:', data); // Log the fetched data
+                    const { lessons, action_plans } = data;
+
+                    populateDropdown('lessonDropdown', lessons, 'Select a lesson'); // Populate the lesson dropdown with fetched data
+
+                    populateDropdown('actionPlanDropdown', action_plans, 'Select a action plan'); // Populate the lesson dropdown with fetched data
+                }
+            } catch (error) {
+                console.error('Error fetching lessons:', error); // Log any errors that occur
+            }
+        }
+
+        // Function to populate a dropdown with items
+        function populateDropdown(dropdownId, items, fallbackText) {
+            const dropdown = document.getElementById(dropdownId);
+
+            const defaultOption = items.length > 0 ? items[0] : false;
+
+            if (!defaultOption || dropdownId == "classDropdown") {
+                dropdown.innerHTML = `<option value="">${fallbackText}</option>`; // Set the default option
+            } else {
+                dropdown.innerHTML = ''; // Clear the dropdown
+            }
+
+            items.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item;
+                option.textContent = item;
+                dropdown.appendChild(option); // Add each item as an option in the dropdown
+            });
+        }
+
+        // Function to send a message to the chatbot
+        async function sendMessage() {
+            try {
+                const userInputElement = document.getElementById('userInput');
+                const userInput = userInputElement.value;
+                const responseOutput = document.getElementById('responseOutput');
+                const thinkingIndicator = document.getElementById('thinkingIndicator');
+
+                const classDropdown = document.getElementById('classDropdown');
+                const lessonDropdown = document.getElementById('lessonDropdown');
+                const actionPlanDropdown = document.getElementById('actionPlanDropdown');
+
+                toggleThinkingIndicator(thinkingIndicator, true); // Show the thinking indicator
+
+                const response = await fetch(`${baseURL}/chatbot/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: userInput,
+                        classSelection: classDropdown.value,
+                        lesson: lessonDropdown.value,
+                        actionPlan: actionPlanDropdown.value
+                    }), // Send the user input as a JSON payload
+                    credentials: 'include'
+                });
+
+                toggleThinkingIndicator(thinkingIndicator, false); // Hide the thinking indicator
+
+                if (!response.ok) throw new Error(`Failed to send message: ${response.statusText}`);
+                const data = await response.json();
+                updateChat(responseOutput, userInput, data.text); // Update the chat area with the bot's response
+
+                userInputElement.value = ''; // Clear the user input
+                adjustTextAreaHeight(userInputElement); // Adjust the height of the textarea
+                userInputElement.scrollIntoView({ behavior: 'smooth' }); // Scroll the input into view
+            } catch (error) {
+                console.error('Error sending message:', error); // Log any errors that occur
+            }
+        }
+
+        // Function to show or hide the thinking indicator
+        function toggleThinkingIndicator(indicator, show) {
+            indicator.style.display = show ? 'block' : 'none';
+        }
+
+        // Function to update the chat area with user and bot messages
+        function updateChat(outputElement, userInput, botResponse) {
+            const formattedUserInput = formatLinks(userInput); // Format links in the user input
+            const formattedResponse = formatLinks(botResponse); // Format links in the bot response
+            const timestamp = new Date().toLocaleTimeString(); // Get the current time
+
+            const userMessage = `<div class="user-message"><p class="message-text blue-bold">User: </p><p>${formattedUserInput}</p><span class="timestamp">${timestamp}</span></div>`;
+            const botMessage = `<div class="bot-message"><p class="message-text purple-bold">Bot:</p>${formattedResponse}<span class="timestamp">${timestamp}</span></div>`;
+            outputElement.innerHTML += userMessage + botMessage; // Append the messages to the chat area
+            outputElement.scrollTop = outputElement.scrollHeight; // Scroll to the bottom of the chat area
+        }
+
+        function copyToClipboard() {
+            const responseOutput = document.getElementById('responseOutput').innerText;
+            navigator.clipboard.writeText(responseOutput).then(() => {
+                console.log('Content copied to clipboard!');
+                alert('Content copied to clipboard!');  // Optional: alert the user of successful copy.
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+            });
+        }
+
+        // Function to format links in a given text
+        function formatLinks(text) {
+            const urlPattern = /(https?:\/\/[^\s]+)/g;
+            return text.replace(urlPattern, '<a href="$1" target="_blank">$1</a>'); // Replace URLs with clickable links
+        }
+
+        // Function to add event listeners for user interactions
+        function addEventListeners() {
+            document.getElementById('sendButton').addEventListener('click', sendMessage); // Event listener for the send button
+            document.getElementById('copyButton').addEventListener('click', copyToClipboard);
+
+            document.getElementById('userInput').addEventListener('keypress', function (event) {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault(); // Prevent the default Enter key behavior (i.e., new line)
+                    sendMessage(); // Send the message when Enter is pressed
+                }
+            });
+
+            document.getElementById('userInput').addEventListener('input', function () {
+                adjustTextAreaHeight(this); // Adjust the height of the textarea when the input changes
+            });
+
+            document.getElementById('classDropdown').addEventListener('change', function () {
+                if (!this.value) {
+                    console.warn('No class selected. Please select a class.');
+                    return; // Do nothing if no class is selected
+                }
+                selectedClassId = this.value; // Update the selected class ID
+                fetchClassConfiguration(); // Fetch lessons for the selected class
+            });
+
+            document.getElementById('requestConversation').addEventListener('click', () => {
+
+                const dialog = getDialog()
+                dialog.showModal();
+                dialog.classList.add('fade-in');
+            });
+
+
+            const getDialog = () => document.querySelector("dialog")
+            const getCloseDialogButton = () => document.getElementById("closeDialog")
+
+            const closeModal = () => {
+                const dialog = getDialog()
+                dialog.close();
+                submissionStatus.style.display = 'none';
+                dialog.removeEventListener('transitionend', closeModal);
+            }
+
+            function signalModalClose() {
+                const dialog = getDialog()
+                dialog.classList.remove('fade-in');
+                dialog.addEventListener('transitionend', closeModal);
+            }
+
+            getCloseDialogButton().addEventListener('click', function () {
+                signalModalClose();
+            });
+
+            document.getElementById("requestConversationDownload").addEventListener('click', async () => {
+                const email = document.getElementById('email').value;
+
+                const classDropdown = document.getElementById('classDropdown');
+                const lessonDropdown = document.getElementById('lessonDropdown');
+                const actionPlanDropdown = document.getElementById('actionPlanDropdown');
+
+                try {
+                    const response = await fetch(`${baseURL}/download-conversation`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            classSelection: classDropdown.value,
+                            lesson: lessonDropdown.value,
+                            actionPlan: actionPlanDropdown.value
+                        }),
+                        credentials: 'include'
+                    });
+                    const blob = await response.blob();
+
+                    const filename = response.headers.get('Content-Disposition').split('filename=')[1];
+
+                    const link = document.createElement("a");
+                    link.href = URL.createObjectURL(blob);
+
+                    link.download = filename;
+                    link.click();
+
+                    if (!response.ok) {
+                        throw new Error(`${response.statusText}`);
+                    }
+
+                } catch (error) {
+
+                    console.error('Error downloading conversatioin:', error);
+                }
+            });
+
+            document.getElementById("requestConversationEmail").addEventListener('click', async () => {
+                const email = document.getElementById('email').value;
+
+                const classDropdown = document.getElementById('classDropdown');
+                const lessonDropdown = document.getElementById('lessonDropdown');
+                const actionPlanDropdown = document.getElementById('actionPlanDropdown');
+
+
+                const submissionStatus = document.getElementById('submissionStatus');
+                try {
+                    const response = await fetch(`${baseURL}/send-conversation`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email: email,
+                            classSelection: classDropdown.value,
+                            lesson: lessonDropdown.value,
+                            actionPlan: actionPlanDropdown.value
+                        }),
+                        credentials: 'include'
+                    });
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(`${response.statusText}, ${data.detail}`);
+                    }
+
+                    submissionStatus.style.display = 'block';
+                    submissionStatus.classList.remove('red-bold');
+                    submissionStatus.classList.add('green-bold');
+
+                    submissionStatus.textContent = `Conversation sent to ${email}.`;
+                    // Log the fetched data
+                } catch (error) {
+
+                    submissionStatus.style.display = 'block';
+                    submissionStatus.classList.remove('green-bold');
+                    submissionStatus.classList.add('red-bold');
+
+                    submissionStatus.textContent = `Failed to send conversation by email. ${error} `;
+
+
+                    console.error('Error sending email:', error); // Log any errors that occur
+                }
+            });
+        }
+
+        // Function to adjust the height of a textarea based on its content
+        function adjustTextAreaHeight(textarea) {
+            textarea.style.height = 'auto'; // Reset the height to auto
+            textarea.style.height = (textarea.scrollHeight) + 'px'; // Set the height to the scroll height
+        }
+
+    </script>
+</body>
+
+</html>

@@ -1,7 +1,16 @@
 import os
+import platform
 import typing
 import logging
 from pydantic import SecretStr
+
+
+# Define the path to the 'classes' directory within the current working directory
+current_working_directory = os.getcwd()
+classes_directory = os.path.normpath(os.path.join(current_working_directory, "classes"))
+
+if not os.path.exists(classes_directory):
+    logging.error(f"Classes directory not found at {classes_directory}")
 
 
 model_provider = typing.cast(str, os.getenv("MODEL_PROVIDER"))
@@ -57,3 +66,28 @@ if not ibm_project_id and model_provider == "IBM":
         "Problems loading project_id because IBM_PROJECT_ID environment variable not set"
     )
     raise ValueError("IBM_PROJECT_ID environment variable not set")
+
+mailgun_api_url = typing.cast(str, os.getenv("MAILGUN_API_URL"))
+if not mailgun_api_url:
+    logging.error(
+        "Problems loading url because MAILGUN_API_URL environment variable not set"
+    )
+    raise ValueError("MAILGUN_API_URL environment variable not set")
+
+mailgun_api_key = typing.cast(str, os.getenv("MAILGUN_API_KEY"))
+if not mailgun_api_key:
+    logging.error(
+        "Problems loading key because MAILGUN_API_KEY environment variable not set"
+    )
+    raise ValueError("MAILGUN_API_KEY environment variable not set")
+
+mailgun_from_address = typing.cast(str, os.getenv("MAILGUN_FROM_ADDRESS"))
+if not mailgun_from_address:
+    logging.error(
+        "Problems loading from address because MAILGUN_FROM_ADDRESS environment variable not set"
+    )
+    raise ValueError("MAILGUN_FROM_ADDRESS environment variable not set")
+
+encoding = (
+    "utf-8" if platform.system() == "Windows" else None
+)  # None uses the default encoding in Linux

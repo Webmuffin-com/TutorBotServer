@@ -1,29 +1,36 @@
-import uuid
-import os
-import platform
+from contextlib import asynccontextmanager
+from datetime import datetime
+import re
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Response, HTTPException, Depends
-from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
+from fastapi.responses import (
+    HTMLResponse,
+    FileResponse,
+    JSONResponse,
+)
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from starlette.templating import Jinja2Templates
 from starlette.middleware.cors import CORSMiddleware
+from starlette.templating import Jinja2Templates
+import logging
+import os
+import uuid
 import uvicorn
-from dotenv import load_dotenv
-from contextlib import asynccontextmanager
-from SessionCache import SessionCacheManager, SessionCache
+
 
 # Load environmental variables file from env.txt
 load_dotenv("env.txt")
 
-import logging  # noqa: E402
-
-from Utilities import setup_csv_logging  # noqa: E402
+from constants import classes_directory  # noqa: E402
+from SessionCache import SessionCacheManager, session_manager  # noqa: E402
+from Utilities import (
+    generate_conversation_pdf,
+    send_email,
+    setup_csv_logging,
+)  # noqa: E402
 from LLM_Handler import invoke_llm  # noqa: E402
-from Temp_html import temp_html_v5  # noqa: E402
 
 setup_csv_logging()
-
-session_manager = SessionCacheManager()
 
 
 def get_session_manager():
@@ -137,6 +144,9 @@ async def favicon():
 # Define a Pydantic model for the request body
 class PyMessage(BaseModel):
     text: str
+    classSelection: str
+    lesson: str
+    actionPlan: str
 
 
 # Define a Pydantic model for the response body
@@ -145,15 +155,21 @@ class PyResponse(BaseModel):
 
 
 # Define your chatbot logic
-async def generate_response(p_session_key, p_Request):
+def generate_response(p_session_key, p_Request):
 
     sessionCache = session_manager.get_session(p_session_key)
 
     if sessionCache:
-        if not sessionCache.m_conundrum:
-            logging.warning (f"Session ({p_session_key}) did not specify Conundrum")
+        if not p_Request.classSelection:
+            logging.warning(f"Session ({p_session_key}) did not specify Conundrum")
             return "You must select a lesson to use this Bot"
-        return await invoke_llm(sessionCache, p_Request, p_session_key)
+        if not p_Request.lesson:
+            logging.warning(f"Session ({p_session_key}) did not specify Lesson")
+            return "You must select a lesson to use this Bot"
+        if not p_Request.actionPlan:
+            logging.warning(f"Session ({p_session_key}) did not specify Action Plan")
+            return "You must select an action plan to use this Bot"
+        return invoke_llm(sessionCache, p_Request, p_session_key)
     else:
         response = "Received unknown session key"
         logging.error(
@@ -165,9 +181,9 @@ async def generate_response(p_session_key, p_Request):
 
 # Define an endpoint to handle incoming messages
 @app.post("/chatbot/")
-async def chatbot_endpoint(request: Request, message: PyMessage) -> JSONResponse:
+def chatbot_endpoint(request: Request, message: PyMessage) -> JSONResponse:
     session_key = request.cookies.get("session_key")
-    response_text = await generate_response(session_key, message.text)
+    response_text = generate_response(session_key, message)
 
     #    logging.warning(f"Received chatbot request ({message.text}), response ({response_text})", extra={'sessionKey': session_key})  # Debug statement
 
@@ -181,11 +197,8 @@ async def chatbot_endpoint(request: Request, message: PyMessage) -> JSONResponse
 
 # Define a welcome endpoint
 @app.get("/", response_class=HTMLResponse)
-async def welcome(request: Request):
-    result = temp_html_v5()
-
-    logging.warning("Loaded new client web page")
-    return HTMLResponse(content=result)
+async def welcome():
+    return FileResponse("static/index.html")
 
 
 @app.delete("/session/{session_key}")
@@ -196,20 +209,14 @@ def delete_session(
     return {"message": "Session deleted"}
 
 
-# Define the path to the 'classes' directory within the current working directory
-current_working_directory = os.getcwd()
-CLASSES_DIR = os.path.join(current_working_directory, "classes")
-CLASSES_DIR = os.path.normpath(CLASSES_DIR)
-
-
 @app.get("/classes/")
 async def list_class_directories(request: Request):
     try:
         session_key = request.cookies.get("session_key")
         directories = [
             d
-            for d in os.listdir(CLASSES_DIR)
-            if os.path.isdir(os.path.join(CLASSES_DIR, d))
+            for d in os.listdir(classes_directory)
+            if os.path.isdir(os.path.join(classes_directory, d))
         ]
 
         logging.warning(
@@ -226,58 +233,20 @@ async def list_class_directories(request: Request):
         )
 
 
-@app.get("/classes/{class_directory}/conundrums/")
-async def list_conundrums(class_directory: str, request: Request):
-    directory_path = os.path.join(CLASSES_DIR, class_directory, "conundrums")
-    directory_path = os.path.normpath(directory_path)
+@app.get("/classes/{class_directory}")
+async def get_class_configuration(class_directory: str, request: Request):
+    directory_path = os.path.join(classes_directory, class_directory)
 
-    sessionKey = request.cookies.get("session_key")
-    try:
-        if not os.path.exists(directory_path):
-            logging.error(
-                f"Directory does not exist: {directory_path}",
-                extra={"sessionKey": sessionKey},
-            )
-            raise HTTPException(status_code=404, detail="Directory does not exist")
-
-        if not os.path.isdir(directory_path):
-            logging.error(
-                f"Path is not a directory: {directory_path}",
-                extra={"sessionKey": sessionKey},
-            )
-            raise HTTPException(status_code=400, detail="Path is not a directory")
-
-        txt_files = [
-            f
-            for f in os.listdir(directory_path)
-            if os.path.isfile(os.path.join(directory_path, f)) and f.endswith(".txt")
-        ]
-
-        logging.warning(
-            f"Loaded conundrum files for {class_directory} which contained ({txt_files})",
-            extra={"sessionKey": sessionKey},
-        )
-        return JSONResponse(content={"files": txt_files})
-    except Exception as e:
-        logging.error(
-            f"Error listing files in directory {class_directory}: {e}",
-            extra={"sessionKey": sessionKey},
-        )
-        raise HTTPException(status_code=500, detail="Error listing files in directory")
-
-
-@app.get("/classes/{class_directory}/conundrums/{file_name}")
-async def load_conundrum_file(class_directory: str, file_name: str, request: Request):
-    conundrum_file_path = os.path.join(
-        CLASSES_DIR, class_directory, "conundrums", file_name
+    conundrums_directory_path = os.path.normpath(
+        os.path.join(directory_path, "conundrums")
     )
-    conundrum_file_path = os.path.normpath(conundrum_file_path)
-    action_plan_file_path = os.path.join(
-        CLASSES_DIR, class_directory, "action_plan.txt"
+    action_plans_file_path = os.path.normpath(
+        os.path.join(directory_path, "actionplans")
     )
-    action_plan_file_path = os.path.normpath(action_plan_file_path)
-    scenario_file_path = os.path.join(CLASSES_DIR, class_directory, "scenario.txt")
-    scenario_file_path = os.path.normpath(scenario_file_path)
+
+    print(f"Conundrums directory path: {conundrums_directory_path}")
+
+    print(f"Action plans file path: {action_plans_file_path}")
 
     session_key = request.cookies.get("session_key") or "unknown"
     session_cache = session_manager.get_session(session_key)
@@ -285,70 +254,129 @@ async def load_conundrum_file(class_directory: str, file_name: str, request: Req
     if session_cache is None:
         raise HTTPException(status_code=404, detail="Could not locate Session Key")
 
-    if not os.path.exists(conundrum_file_path):
-        logging.warning(
-            f"Failed to locate file {conundrum_file_path}",
-            extra={"sessionKey": session_key},
-        )
-        raise HTTPException(status_code=404, detail="Conundrum file not found")
-
     try:
-        encoding = 'utf-8' if platform.system() == 'Windows' else None  # None uses the default encoding in Linux
-        # Load conundrum file
-        with open(conundrum_file_path, "r", encoding=encoding) as conundrum_file:
-            conundrum_content = conundrum_file.read()
-
-        if len(conundrum_content) == 0:
-            logging.warning(
-                f"conundrum file {conundrum_file_path} is empty.",
+        non_existent_directory = not os.path.exists(
+            conundrums_directory_path
+        ) or not os.path.exists(action_plans_file_path)
+        if non_existent_directory:
+            logging.error(
+                f"Directory does not exist: {non_existent_directory}",
                 extra={"sessionKey": session_key},
             )
-            raise HTTPException(status_code=404, detail="Conundrum file was empty")
+            raise HTTPException(status_code=404, detail="Directory does not exist")
 
-        session_cache.set_conundrum(conundrum_content)
+        not_a_directory = not os.path.isdir(
+            conundrums_directory_path
+        ) or not os.path.isdir(action_plans_file_path)
+        if not_a_directory:
+            logging.error(
+                f"Path is not a directory: {not_a_directory}",
+                extra={"sessionKey": session_key},
+            )
+            raise HTTPException(status_code=400, detail="Path is not a directory")
+
+        lessons = [
+            f
+            for f in os.listdir(conundrums_directory_path)
+            if os.path.isfile(os.path.join(conundrums_directory_path, f))
+            and f.endswith(".txt")
+        ]
+
+        lessons.sort()
+
+        action_plans = [
+            f
+            for f in os.listdir(action_plans_file_path)
+            if os.path.isfile(os.path.join(action_plans_file_path, f))
+            and f.endswith(".txt")
+        ]
+
+        action_plans.sort()
 
         logging.warning(
-            f"Loaded conundrum file {conundrum_file_path}",
+            f"Loaded available files for {class_directory} which contained lessons: ({lessons}) and action plans: ({action_plans})",
             extra={"sessionKey": session_key},
         )
-        # we no longer default the action plan... just append a response formatter to it if it exists
-        # session_cache.set_action_plan(get_default_action_plan())
-        # Load action plan file if it exists
-        if os.path.exists(action_plan_file_path):
-            encoding = 'utf-8' if platform.system() == 'Windows' else None  # None uses the default encoding in Linux
-
-            with open(action_plan_file_path, "r", encoding=encoding) as action_plan_file:
-                logging.warning(
-                    f"also loaded action_plan file {action_plan_file_path}",
-                    extra={"sessionKey": session_key},
-                )
-                session_cache.set_action_plan(action_plan_file.read())
-
-                logging.warning(f"Action Plan is {session_cache.m_actionPlan}")
-
-        session_cache.set_scenario(None)
-        # Load scenario file if it exists
-        if os.path.exists(scenario_file_path):
-            encoding = 'utf-8' if platform.system() == 'Windows' else None  # None uses the default encoding in Linux
-
-            with open(scenario_file_path, "r", encoding=encoding) as scenario_file:
-                logging.warning(
-                    f"also loaded scenario file {scenario_file_path}",
-                    extra={"sessionKey": session_key},
-                )
-                session_cache.set_scenario(scenario_file.read())
-
-                logging.warning(f"Scenario is {session_cache.m_scenario}")
 
         session_cache.m_simpleCounterLLMConversation.clear()
 
-        return JSONResponse(content={"message": "Conundrum file loaded successfully"})
-
+        return JSONResponse(content={"lessons": lessons, "action_plans": action_plans})
     except Exception as e:
-        logging.error(f"Error loading conundrum file or action plan: {e}")
-        raise HTTPException(
-            status_code=500, detail="Error loading conundrum file or action plan"
+        logging.error(
+            f"Error listing files in directory {class_directory}: {e}",
+            extra={"sessionKey": session_key},
         )
+        raise HTTPException(status_code=500, detail="Error listing files in directory")
+
+
+@app.post("/send-conversation")
+def send_conversation(request: Request, payload: dict):
+    session_key = request.cookies.get("session_key")
+
+    email = payload.get("email")
+
+    valid_email = re.match(
+        r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", email or ""
+    )
+
+    if valid_email is None or email is None:
+        raise HTTPException(status_code=400, detail="Invalid email address")
+
+    class_name = payload.get("classSelection") or "Unknown"
+    lesson = payload.get("lesson") or "Unknown"
+    action_plan = payload.get("actionPlan") or "Unknown"
+
+    pdf = generate_conversation_pdf(session_key, class_name, lesson, action_plan)
+
+    if pdf is not None:
+
+        print("PDF created successfully.")
+
+        with open("static/conversation-email-template.html", "r") as file:
+            email_template = file.read()
+            email_template = email_template.replace("{{class_name}}", class_name)
+            email_template = email_template.replace("{{lesson}}", lesson)
+            email_template = email_template.replace("{{action_plan}}", action_plan)
+
+            date_string = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+            send_email(
+                email,
+                "Conversation with TutorBot",
+                email_template,
+                [(f"{date_string}_TutorBot_Conversation.pdf", pdf)],  # type: ignore
+            )
+
+            return JSONResponse(content={"message": "PDF created successfully"})
+    else:
+        raise HTTPException(status_code=500, detail="Error creating PDF")
+
+
+@app.post("/download-conversation")
+def download_conversation(request: Request, payload: dict):
+    session_key = request.cookies.get("session_key")
+
+    class_name = payload.get("classSelection")
+    lesson = payload.get("lesson")
+    action_plan = payload.get("actionPlan")
+
+    pdf = generate_conversation_pdf(session_key, class_name, lesson, action_plan)
+
+    if pdf is not None:
+
+        print("PDF created successfully.")
+
+        date_string = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+        return Response(
+            content=pdf,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"inline; filename={date_string}_TutorBot_Conversation.pdf"
+            },
+        )
+    else:
+        raise HTTPException(status_code=500, detail="Error creating PDF")
 
 
 if __name__ == "__main__":
