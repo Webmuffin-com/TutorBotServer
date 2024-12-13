@@ -1,8 +1,8 @@
 from copy import deepcopy
 from datetime import datetime
 from fastapi import HTTPException
+from pyppeteer import launch
 import requests
-from weasyprint import HTML
 import logging
 import nh3
 import os
@@ -140,7 +140,7 @@ def format_conversation(conversation):
     return messages
 
 
-def generate_conversation_pdf(
+async def generate_conversation_pdf(
     session_key: str | None,
     class_name: str | None,
     lesson: str | None,
@@ -194,7 +194,9 @@ def generate_conversation_pdf(
 
         print(f"HTML Content: {html_content}")
 
-        pdf = HTML(string=html_content).write_pdf()
+        # pdf = HTML(string=html_content).write_pdf()
+
+        pdf = await create_pdf(html_content)
 
         return pdf
 
@@ -227,6 +229,17 @@ def send_email(
             logging.error(f"Could not send the email, reason: {response.text}")
     except Exception as ex:
         logging.exception(f"Mailgun error: {ex}")
+
+
+async def create_pdf(html):
+    browser = await launch()
+    page = await browser.newPage()
+
+    await page.setContent(html)
+    pdf = await page.pdf({"format": "Letter"})
+    await browser.close()
+
+    return pdf
 
 
 def generate_log_filename(prefix="logs/TutorBot_Log", extension="csv"):

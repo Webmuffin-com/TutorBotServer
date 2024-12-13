@@ -310,7 +310,7 @@ async def get_class_configuration(class_directory: str, request: Request):
 
 
 @app.post("/send-conversation")
-def send_conversation(request: Request, payload: dict):
+async def send_conversation(request: Request, payload: dict):
     session_key = request.cookies.get("session_key")
 
     email = payload.get("email")
@@ -326,7 +326,7 @@ def send_conversation(request: Request, payload: dict):
     lesson = payload.get("lesson") or "Unknown"
     action_plan = payload.get("actionPlan") or "Unknown"
 
-    pdf = generate_conversation_pdf(session_key, class_name, lesson, action_plan)
+    pdf = await generate_conversation_pdf(session_key, class_name, lesson, action_plan)
 
     if pdf is not None:
 
@@ -353,14 +353,14 @@ def send_conversation(request: Request, payload: dict):
 
 
 @app.post("/download-conversation")
-def download_conversation(request: Request, payload: dict):
+async def download_conversation(request: Request, payload: dict):
     session_key = request.cookies.get("session_key")
 
     class_name = payload.get("classSelection")
     lesson = payload.get("lesson")
     action_plan = payload.get("actionPlan")
 
-    pdf = generate_conversation_pdf(session_key, class_name, lesson, action_plan)
+    pdf = await generate_conversation_pdf(session_key, class_name, lesson, action_plan)
 
     if pdf is not None:
 
