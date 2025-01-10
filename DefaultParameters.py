@@ -1,6 +1,6 @@
 # This is no longer used as if nothing specified, we assume it's in the conundrum
 def get_default_scenario():
-    prompt_parameter = f"""
+    prompt_parameter = """
 The following tags are used to define concepts that need to be used consistently.  Here are the Tags:
 CONUNDRUM   Tells LLM that this is the part of the prompt that contains all teaching goals and syllabus
 SYLLABUS	Tells LLM what we are going to teach
@@ -22,7 +22,7 @@ Both PERMISSION and RESTRICT tags only operate within the context of the TOPIC i
 
 # This is no longer used..... Will not run without specify a Conundrum File
 def get_default_conundrum():
-    prompt_parameter = f"""
+    prompt_parameter = """
 <CONUNDRUM>
     <SYLLABUS>
         <TOPIC  name="Introduction to Project Management">
@@ -169,14 +169,13 @@ assessment, is crucial for the successful execution of the project.
     """
     return prompt_parameter
 
+
 # We require at least this action plan to keep bot out of the weeks
 def get_result_formatting():
     prompt_parameter = """
 - Use the content in the CONUNDRUM section of the prompt to provide guidance for completing the task.
 - You should limit your responses to ideas and concepts presented in the CONUNDRUM unless specified differently in the CONUNDRUM
 
-Please format all responses in plain text or Markdown only. Avoid using XML-style tags or any other special \
-formatting symbols that resemble programming or markup languages unless explicitly requested for content generation \
-purposes."""
+Please format all responses in plain text or HTML only."""
 
     return prompt_parameter

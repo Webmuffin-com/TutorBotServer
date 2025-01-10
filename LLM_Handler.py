@@ -1,12 +1,5 @@
-import logging
-import re
 from bs4 import BeautifulSoup
-import DefaultParameters
-from Utilities import setup_csv_logging
-from SessionCache import SessionCache
-from DefaultParameters import get_result_formatting
-import markdown2
-import html
+import logging
 
 from constants import (
     model_provider,
@@ -22,6 +15,15 @@ from constants import (
     ibm_project_id,
     ibm_url,
 )
+from DefaultParameters import get_result_formatting
+from SessionCache import SessionCache
+from Types import PyMessage
+from Utilities import (
+    convert_llm_output_to_html,
+    get_action_plan,
+    get_conundrum,
+    setup_csv_logging,
+)
 
 LastResponse = ""
 
@@ -31,9 +33,10 @@ def initialize_llm():
     match model_provider:
         case "OPENAI":
             from langchain_openai import ChatOpenAI
+
             return ChatOpenAI(
                 model=model,
-             #   max_tokens=max_tokens,
+                #   max_tokens=max_tokens,
                 max_retries=max_retries,
                 timeout=timeout,
                 temperature=temperature,
@@ -44,9 +47,10 @@ def initialize_llm():
             )
         case "GOOGLE":
             from langchain_google_vertexai import ChatVertexAI
+
             return ChatVertexAI(
                 model_name=model,
-            #    max_tokens=max_tokens,
+                #    max_tokens=max_tokens,
                 max_retries=max_retries,
                 timeout=timeout,
                 temperature=temperature,
@@ -56,9 +60,10 @@ def initialize_llm():
             )
         case "IBM":
             from langchain_ibm import ChatWatsonx
+
             return ChatWatsonx(
                 model_id=model,
-            #    max_tokens=max_tokens,
+                #    max_tokens=max_tokens,
                 max_retries=max_retries,
                 timeout=timeout,
                 temperature=temperature,
@@ -71,9 +76,10 @@ def initialize_llm():
             )
         case "ANTHROPIC":
             from langchain_anthropic import ChatAnthropic
+
             return ChatAnthropic(
                 model_name=model,
-            #    max_tokens=max_tokens,
+                #    max_tokens=max_tokens,
                 max_retries=max_retries,
                 timeout=timeout,
                 temperature=temperature,
@@ -85,74 +91,28 @@ def initialize_llm():
             )
         case "OLLAMA":
             from langchain_ollama import ChatOllama
+
             return ChatOllama(model=model)
         case _:
             raise ValueError("Invalid model provider")
 
+
 llm = initialize_llm()
 
-def convert_llm_output_to_html(llm_output):
-    logging.warning(f"LLM OUTPUT =========================================\n{llm_output}")
-    # First, escape any raw HTML to avoid XSS attacks or unintended HTML rendering
-    # The markdown2 library will convert HTML tags inside markdown back to HTML
-    escaped_output = html.escape(llm_output)
 
-    logging.warning(f"ESCAPED OUTPUT =========================================\n{escaped_output}")
-
-    # Convert Markdown to HTML
-    # Note: safe_mode and extras can be adjusted based on your needs
-    html_output = markdown2.markdown(escaped_output, extras=["fenced-code-blocks", "safe-mode", "spoiler"])
-    #html_output = escaped_output
-    logging.warning(f"HTML MARKDOWN OUTPUT =========================================\n{html_output}")
-
-    # Unescape only the intended HTML that is safe (You might need to customize this based on your context)
-    # This step assumes you have specific tags you want to allow directly from your LLM and are handled separately
-    final_html = html.unescape(html_output)
-    #final_html = html_output
-
-    logging.warning(f"FINAL OUTPUT =========================================\n{final_html}")
-
-    return final_html
-
-
-def convert_llm_output_to_html_old(llm_output):
-    """
-    Convert mixed Markdown, including code blocks and inline HTML, to safe HTML.
-    Was written by ChatGPT
-    :param llm_output: str, text output from LLM including Markdown and HTML tags.
-    :return: str, HTML formatted text.
-    """
-    logging.warning (f"BEFORE {llm_output}")
-    # First, escape any raw HTML to avoid XSS attacks or unintended HTML rendering
-    # The markdown2 library will convert HTML tags inside markdown back to HTML
-    escaped_output = html.escape(llm_output)
-
-    logging.warning(f"ESCAPED OUTPUT....{escaped_output}")
-
-    # Convert Markdown to HTML
-    # Note: safe_mode and extras can be adjusted based on your needs
-   #html_output = markdown2.markdown(escaped_output, extras=["fenced-code-blocks", "safe-mode", "spoiler"])
-    html_output = escaped_output
-    #logging.warning(f"HTML OUTPUT....{html_output}")
-
-    # Unescape only the intended HTML that is safe (You might need to customize this based on your context)
-    # This step assumes you have specific tags you want to allow directly from your LLM and are handled separately
-  # final_html = html.unescape(html_output)
-    final_html = html_output
-
- #   logging.warning(f"FINAL OUTPUT....{final_html}")
-
-    return final_html
-
-async def invoke_llm(p_SessionCache: SessionCache, p_Request: str, p_sessionKey: str):
+def invoke_llm(p_SessionCache: SessionCache, p_Request: PyMessage, p_sessionKey: str):
     global LastResponse
     try:
 
         # we no longer need to define scenario here.  If empty, assume in conundrum
-        scenerio   = ""  #DefaultParameters.get_default_scenario()
-        conundrum  = p_SessionCache.get_conundrum()
+        scenerio = ""  # DefaultParameters.get_default_scenario()
+        conundrum = get_conundrum(
+            p_Request.classSelection, p_Request.lesson, p_sessionKey
+        )
 
-        action_plan = p_SessionCache.get_action_plan()
+        action_plan = get_action_plan(
+            p_Request.classSelection, p_Request.actionPlan, p_sessionKey
+        )
 
         if action_plan is None:
             action_plan = ""  # Default to an empty string if no action plan is found
@@ -160,21 +120,19 @@ async def invoke_llm(p_SessionCache: SessionCache, p_Request: str, p_sessionKey:
         actionPlan = action_plan + get_result_formatting()
 
         logging.warning(
-            f"LLM User's Request ({p_Request})", extra={"sessionKey": p_sessionKey}
+            f"LLM User's Request ({p_Request.text})", extra={"sessionKey": p_sessionKey}
         )
 
         messages = [
             ("system", scenerio),
             ("system", conundrum),
             *p_SessionCache.m_simpleCounterLLMConversation.get_all_previous_messages(),
-            ("user", p_Request),
+            ("user", p_Request.text),
             ("system", actionPlan),
         ]
 
         # Test the messages structure before formatting
-        logging.warning(
-            f"PROMPT ({messages})", extra={"sessionKey": p_sessionKey}
-        )
+        logging.warning(f"PROMPT ({messages})", extra={"sessionKey": p_sessionKey})
 
         if llm is None:
             raise ValueError("LLM not initialized")
@@ -182,7 +140,7 @@ async def invoke_llm(p_SessionCache: SessionCache, p_Request: str, p_sessionKey:
         llm_response = llm.invoke(messages)
 
         p_SessionCache.m_simpleCounterLLMConversation.add_message(
-            "user", p_Request, "LLM"
+            "user", p_Request.text, "LLM"
         )  # now we add the request.
 
         BotResponse = str(llm_response.content)
@@ -194,7 +152,7 @@ async def invoke_llm(p_SessionCache: SessionCache, p_Request: str, p_sessionKey:
             token_usage = llm_response.response_metadata.get("token_usage")
 
             if token_usage:
-                current_token_usage = token_usage.get('prompt_tokens')
+                current_token_usage = token_usage.get("prompt_tokens")
                 logging.info(
                     f"Tokens used - Prompt tokens: {token_usage.get('prompt_tokens')}, Completion tokens: \
             {token_usage.get('completion_tokens')}, Total tokens: {token_usage.get('total_tokens')}",
@@ -205,7 +163,7 @@ async def invoke_llm(p_SessionCache: SessionCache, p_Request: str, p_sessionKey:
         soup = BeautifulSoup(BotResponse, "html.parser")
         plain_text_response = soup.get_text().replace("\n", " ").strip()
 
-        EscapedXMLTags = convert_llm_output_to_html (BotResponse)
+        EscapedXMLTags = convert_llm_output_to_html(BotResponse)
 
         logging.warning(
             f"RESPONSE FROM LLM Cleaned: ({plain_text_response})\n\n\nSENT TO CLIENT ({EscapedXMLTags}).\n\n\nRAW_LLM_OUTPUT ({BotResponse}).\n\n\nDETAILS ({llm_response})",
@@ -216,8 +174,10 @@ async def invoke_llm(p_SessionCache: SessionCache, p_Request: str, p_sessionKey:
             "assistant", BotResponse, "LLM"
         )  # now we add the request.
 
-        if (current_token_usage > max_tokens):
-            logging.warning(f"Token usage ({token_usage}) exceeded Max Token ({max_tokens}).  Removing oldest part of user,attendant conversation")
+        if current_token_usage > max_tokens:
+            logging.warning(
+                f"Token usage ({token_usage}) exceeded Max Token ({max_tokens}).  Removing oldest part of user,attendant conversation"
+            )
             p_SessionCache.m_simpleCounterLLMConversation.prune_oldest_pair()
 
         return EscapedXMLTags
@@ -231,6 +191,6 @@ async def invoke_llm(p_SessionCache: SessionCache, p_Request: str, p_sessionKey:
         )
         return f"An error ({e}) occurred processing your request, Please try again"
 
+
 if __name__ == "__main__":
     setup_csv_logging()
-
