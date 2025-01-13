@@ -176,6 +176,6 @@ def get_result_formatting():
 - Use the content in the CONUNDRUM section of the prompt to provide guidance for completing the task.
 - You should limit your responses to ideas and concepts presented in the CONUNDRUM unless specified differently in the CONUNDRUM
 
-Please format all responses in plain text or HTML only."""
+Please format all responses in Markdown or HTML"""
 
     return prompt_parameter

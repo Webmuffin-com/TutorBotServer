@@ -18,6 +18,36 @@ from constants import (
 
 from SessionCache import SimpleCounterLLMConversation, session_manager
 
+def get_scenario (class_directory: str, scenario_file_name: str, session_key: str):
+    scenario_file_name = os.path.join(
+        classes_directory, class_directory, scenario_file_name
+    )
+    scenario_file_name = os.path.normpath(scenario_file_name)
+
+    if not os.path.exists(scenario_file_name):
+        logging.warning(
+            f"Failed to locate file {scenario_file_name}",
+            extra={"sessionKey": session_key},
+        )
+        raise HTTPException(status_code=404, detail="Scenario file not found")
+
+    # Load conundrum file
+    with open(scenario_file_name, "r", encoding=encoding) as scenario_file:
+        scenario_content = scenario_file.read()
+
+        if len(scenario_content) == 0:
+            logging.warning(
+                f"scenario file {scenario_file_name} is empty.  Assuming in conundrum",
+                extra={"sessionKey": session_key},
+            )
+        else:
+            logging.warning(
+                f"Loaded scenario file {scenario_file_name}",
+                extra={"sessionKey": session_key},
+        )
+
+        return scenario_content
+
 
 def get_conundrum(class_directory: str, conundrum_file_name: str, session_key: str):
     """

@@ -72,21 +72,21 @@ if not mailgun_api_url:
     logging.error(
         "Problems loading url because MAILGUN_API_URL environment variable not set"
     )
-    raise ValueError("MAILGUN_API_URL environment variable not set")
+ #   raise ValueError("MAILGUN_API_URL environment variable not set")
 
 mailgun_api_key = typing.cast(str, os.getenv("MAILGUN_API_KEY"))
 if not mailgun_api_key:
     logging.error(
         "Problems loading key because MAILGUN_API_KEY environment variable not set"
     )
-    raise ValueError("MAILGUN_API_KEY environment variable not set")
+ #   raise ValueError("MAILGUN_API_KEY environment variable not set")
 
 mailgun_from_address = typing.cast(str, os.getenv("MAILGUN_FROM_ADDRESS"))
 if not mailgun_from_address:
     logging.error(
         "Problems loading from address because MAILGUN_FROM_ADDRESS environment variable not set"
     )
-    raise ValueError("MAILGUN_FROM_ADDRESS environment variable not set")
+ #   raise ValueError("MAILGUN_FROM_ADDRESS environment variable not set")
 
 encoding = (
     "utf-8" if platform.system() == "Windows" else None

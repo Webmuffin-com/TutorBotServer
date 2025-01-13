@@ -41,7 +41,7 @@ body {
 	padding: 2rem;
 	width: 90dvw; /* Responsive width */
 	height: 85dvh; /* Take 85% of the viewport height */
-	max-width: 1200px;
+	max-width: 1400px;
 	display: flex;
 	flex-direction: column;
 	justify-content: flex-start; /* Spread content vertically */

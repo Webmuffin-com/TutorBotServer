@@ -22,6 +22,7 @@ from Utilities import (
     convert_llm_output_to_html,
     get_action_plan,
     get_conundrum,
+    get_scenario,
     setup_csv_logging,
 )
 
@@ -105,7 +106,9 @@ def invoke_llm(p_SessionCache: SessionCache, p_Request: PyMessage, p_sessionKey:
     try:
 
         # we no longer need to define scenario here.  If empty, assume in conundrum
-        scenerio = ""  # DefaultParameters.get_default_scenario()
+        scenario = get_scenario(
+            p_Request.classSelection, "scenario.txt", p_sessionKey
+        )
         conundrum = get_conundrum(
             p_Request.classSelection, p_Request.lesson, p_sessionKey
         )
@@ -124,7 +127,7 @@ def invoke_llm(p_SessionCache: SessionCache, p_Request: PyMessage, p_sessionKey:
         )
 
         messages = [
-            ("system", scenerio),
+            *([] if scenario == "" else [("system", scenario)]),
             ("system", conundrum),
             *p_SessionCache.m_simpleCounterLLMConversation.get_all_previous_messages(),
             ("user", p_Request.text),
