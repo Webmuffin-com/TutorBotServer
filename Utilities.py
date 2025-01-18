@@ -29,7 +29,8 @@ def get_scenario (class_directory: str, scenario_file_name: str, session_key: st
             f"Failed to locate file {scenario_file_name}",
             extra={"sessionKey": session_key},
         )
-        raise HTTPException(status_code=404, detail="Scenario file not found")
+        #raise HTTPException(status_code=404, detail="Scenario file not found")
+        return ""
 
     # Load conundrum file
     with open(scenario_file_name, "r", encoding=encoding) as scenario_file:
@@ -122,9 +123,9 @@ def get_action_plan(class_directory: str, action_plan_file_path: str, session_ke
 
 
 def convert_llm_output_to_html(llm_output):
-    logging.warning(
-        f"LLM OUTPUT =========================================\n{llm_output}"
-    )
+#    logging.warning(
+#         f"LLM OUTPUT =========================================\n{llm_output}"
+#     )
     attributes = deepcopy(nh3.ALLOWED_ATTRIBUTES)
     attributes["div"] = set()
 
@@ -133,15 +134,15 @@ def convert_llm_output_to_html(llm_output):
     print(attributes)
     clean_html = nh3.clean(llm_output, attributes=attributes)
 
-    logging.warning(
-        f"CLEAN HTML SANITIZED BY NH3 =========================================\n{clean_html}"
-    )
+#     logging.warning(
+#        f"CLEAN HTML SANITIZED BY NH3 =========================================\n{clean_html}"
+#    )
 
     final_html = clean_html
 
-    logging.warning(
-        f"FINAL OUTPUT =========================================\n{final_html}"
-    )
+#    logging.warning(
+#         f"FINAL OUTPUT =========================================\n{final_html}"
+#     )
 
     return final_html
 

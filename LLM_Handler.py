@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 import logging
+import sys
 
 from constants import (
     model_provider,
@@ -98,7 +99,11 @@ def initialize_llm():
             raise ValueError("Invalid model provider")
 
 
-llm = initialize_llm()
+try:
+    llm = initialize_llm()
+except Exception as e:
+    logging.critical(f"Failed to initialize LLM: {e}")
+
 
 
 def invoke_llm(p_SessionCache: SessionCache, p_Request: PyMessage, p_sessionKey: str):
@@ -109,6 +114,11 @@ def invoke_llm(p_SessionCache: SessionCache, p_Request: PyMessage, p_sessionKey:
         scenario = get_scenario(
             p_Request.classSelection, "scenario.txt", p_sessionKey
         )
+
+        # we can work with an empty scenario file
+        if (scenario is None):
+            scenario = ""
+
         conundrum = get_conundrum(
             p_Request.classSelection, p_Request.lesson, p_sessionKey
         )
@@ -126,16 +136,26 @@ def invoke_llm(p_SessionCache: SessionCache, p_Request: PyMessage, p_sessionKey:
             f"LLM User's Request ({p_Request.text})", extra={"sessionKey": p_sessionKey}
         )
 
-        messages = [
-            *([] if scenario == "" else [("system", scenario)]),
-            ("system", conundrum),
-            *p_SessionCache.m_simpleCounterLLMConversation.get_all_previous_messages(),
-            ("user", p_Request.text),
-            ("system", actionPlan),
-        ]
+        if model_provider == "ANTHROPIC":
+            Scenario_Conundrum = f"{scenario}\n{conundrum}\n"
+            Request_ActionPlan = f'Respond to Users Request = ({p_Request.text}) following these instructions ({actionPlan})'
+
+            messages = [
+                ("system", Scenario_Conundrum),
+                *p_SessionCache.m_simpleCounterLLMConversation.get_all_previous_messages(),
+                ("user", Request_ActionPlan)
+            ]
+        else:
+            messages = [
+                *([] if scenario == "" else [("system", scenario)]),
+                ("system", conundrum),
+                *p_SessionCache.m_simpleCounterLLMConversation.get_all_previous_messages(),
+                ("user", p_Request.text),
+                ("system", actionPlan),
+            ]
 
         # Test the messages structure before formatting
-        logging.warning(f"PROMPT ({messages})", extra={"sessionKey": p_sessionKey})
+        logging.warning(f"LLM REQUEST\n{messages}", extra={"sessionKey": p_sessionKey})
 
         if llm is None:
             raise ValueError("LLM not initialized")
@@ -169,7 +189,11 @@ def invoke_llm(p_SessionCache: SessionCache, p_Request: PyMessage, p_sessionKey:
         EscapedXMLTags = convert_llm_output_to_html(BotResponse)
 
         logging.warning(
-            f"RESPONSE FROM LLM Cleaned: ({plain_text_response})\n\n\nSENT TO CLIENT ({EscapedXMLTags}).\n\n\nRAW_LLM_OUTPUT ({BotResponse}).\n\n\nDETAILS ({llm_response})",
+            f"LLM_RESPONSE:\n{BotResponse}).\n\nDETAILS ({llm_response})",
+            extra={"sessionKey": p_sessionKey},
+        )
+        logging.warning(
+            f"SENT TO CLIENT ({EscapedXMLTags})",
             extra={"sessionKey": p_sessionKey},
         )
 
@@ -179,7 +203,7 @@ def invoke_llm(p_SessionCache: SessionCache, p_Request: PyMessage, p_sessionKey:
 
         if current_token_usage > max_tokens:
             logging.warning(
-                f"Token usage ({token_usage}) exceeded Max Token ({max_tokens}).  Removing oldest part of user,attendant conversation"
+                f"Token usage ({current_token_usage}) exceeded Max Token ({max_tokens}).  Removing oldest part of user,attendant conversation"
             )
             p_SessionCache.m_simpleCounterLLMConversation.prune_oldest_pair()
 
