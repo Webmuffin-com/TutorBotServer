@@ -1,6 +1,6 @@
-from bs4 import BeautifulSoup
 import logging
-import sys
+
+from fastapi import HTTPException
 
 from constants import (
     model_provider,
@@ -18,14 +18,10 @@ from constants import (
 )
 from DefaultParameters import get_result_formatting
 from SessionCache import SessionCache
-from Types import PyMessage
-from Utilities import (
-    convert_llm_output_to_html,
-    get_action_plan,
-    get_conundrum,
-    get_scenario,
-    setup_csv_logging,
-)
+from utils.types import PyMessage
+from utils.llm import convert_llm_output_to_html, get_llm_file
+from utils.logging import setup_csv_logging
+
 
 LastResponse = ""
 
@@ -38,7 +34,7 @@ def initialize_llm():
 
             return ChatOpenAI(
                 model=model,
-                #   max_tokens=max_tokens,
+                max_completion_tokens=max_tokens,
                 max_retries=max_retries,
                 timeout=timeout,
                 temperature=temperature,
@@ -52,7 +48,7 @@ def initialize_llm():
 
             return ChatVertexAI(
                 model_name=model,
-                #    max_tokens=max_tokens,
+                max_tokens=max_tokens,
                 max_retries=max_retries,
                 timeout=timeout,
                 temperature=temperature,
@@ -65,7 +61,7 @@ def initialize_llm():
 
             return ChatWatsonx(
                 model_id=model,
-                #    max_tokens=max_tokens,
+                max_tokens=max_tokens,
                 max_retries=max_retries,
                 timeout=timeout,
                 temperature=temperature,
@@ -81,7 +77,7 @@ def initialize_llm():
 
             return ChatAnthropic(
                 model_name=model,
-                #    max_tokens=max_tokens,
+                max_tokens=max_tokens,
                 max_retries=max_retries,
                 timeout=timeout,
                 temperature=temperature,
@@ -105,27 +101,31 @@ except Exception as e:
     logging.critical(f"Failed to initialize LLM: {e}")
 
 
-
 def invoke_llm(p_SessionCache: SessionCache, p_Request: PyMessage, p_sessionKey: str):
     global LastResponse
     try:
 
         # we no longer need to define scenario here.  If empty, assume in conundrum
-        scenario = get_scenario(
-            p_Request.classSelection, "scenario.txt", p_sessionKey
+        scenario = get_llm_file(
+            p_Request.classSelection, "conundrums", "scenario.txt", p_sessionKey
         )
 
         # we can work with an empty scenario file
-        if (scenario is None):
+        if scenario is None:
             scenario = ""
 
-        conundrum = get_conundrum(
-            p_Request.classSelection, p_Request.lesson, p_sessionKey
+        conundrum = get_llm_file(
+            p_Request.classSelection, "conundrums", p_Request.lesson, p_sessionKey
         )
 
-        action_plan = get_action_plan(
-            p_Request.classSelection, p_Request.actionPlan, p_sessionKey
+        if conundrum is None:
+            raise HTTPException(status_code=404, detail="Conundrum file not found")
+
+        action_plan = get_llm_file(
+            p_Request.classSelection, "actionplans", p_Request.actionPlan, p_sessionKey
         )
+
+        print(f"ACTION PLAN: {action_plan}")
 
         if action_plan is None:
             action_plan = ""  # Default to an empty string if no action plan is found
@@ -138,12 +138,12 @@ def invoke_llm(p_SessionCache: SessionCache, p_Request: PyMessage, p_sessionKey:
 
         if model_provider == "ANTHROPIC":
             Scenario_Conundrum = f"{scenario}\n{conundrum}\n"
-            Request_ActionPlan = f'Respond to Users Request = ({p_Request.text}) following these instructions ({actionPlan})'
+            Request_ActionPlan = f"Respond to Users Request = ({p_Request.text}) following these instructions ({actionPlan})"
 
             messages = [
                 ("system", Scenario_Conundrum),
                 *p_SessionCache.m_simpleCounterLLMConversation.get_all_previous_messages(),
-                ("user", Request_ActionPlan)
+                ("user", Request_ActionPlan),
             ]
         else:
             messages = [
@@ -181,10 +181,6 @@ def invoke_llm(p_SessionCache: SessionCache, p_Request: PyMessage, p_sessionKey:
             {token_usage.get('completion_tokens')}, Total tokens: {token_usage.get('total_tokens')}",
                     extra={"sessionKey": p_sessionKey},
                 )
-
-        # Strip HTML tags from BotResponse to put in conversation as it messes up the LLM to feed HTML into it.
-        soup = BeautifulSoup(BotResponse, "html.parser")
-        plain_text_response = soup.get_text().replace("\n", " ").strip()
 
         EscapedXMLTags = convert_llm_output_to_html(BotResponse)
 

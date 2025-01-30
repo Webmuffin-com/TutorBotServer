@@ -1,6 +1,6 @@
-from contextlib import asynccontextmanager
 from datetime import datetime
 import re
+import subprocess
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Response, HTTPException, Depends
 from fastapi.responses import (
@@ -9,28 +9,36 @@ from fastapi.responses import (
     JSONResponse,
 )
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
 from starlette.middleware.cors import CORSMiddleware
 from starlette.templating import Jinja2Templates
 import logging
-import os
 import uuid
 import uvicorn
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+
+from utils.types import PyMessage
 
 
 # Load environmental variables file from env.txt
 load_dotenv("env.txt")
 
-from constants import classes_directory  # noqa: E402
-from SessionCache import SessionCacheManager, session_manager  # noqa: E402
-from Utilities import (
-    generate_conversation_pdf,
-    send_email,
+from utils.logging import (  # noqa: E402
+    drain_logs_to_s3,
     setup_csv_logging,
-)  # noqa: E402
-from LLM_Handler import invoke_llm  # noqa: E402
+)
+from constants import cloud_mode_enabled, mailgun_enabled  # noqa: E402
 
-setup_csv_logging()
+
+from utils.pdf import generate_conversation_pdf  # noqa: E402
+from utils.email import send_email  # noqa: E402
+from utils.llm import validate_access_key  # noqa: E402
+from utils.filesystem import (  # noqa: E402
+    check_directory_exists,
+    list_directory,
+)
+from SessionCache import SessionCacheManager, session_manager  # noqa: E402
+from LLM_Handler import invoke_llm  # noqa: E402
 
 
 def get_session_manager():
@@ -53,21 +61,37 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+scheduler = None
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup event
+
+def startup_event():
+
+    setup_csv_logging()
     logging.warning("Application startup")
 
-    yield
+    if cloud_mode_enabled:
+        scheduler = BackgroundScheduler()
+        drain_trigger = CronTrigger(hour="*", minute="*", second="0,30")
 
-    # Shutdown event
+        scheduler.add_job(drain_logs_to_s3, trigger=drain_trigger)
+
+        scheduler.start()
+
+
+def shutdown_event():
     logging.warning("Application shutdown")
+
+    if scheduler:
+        scheduler.shutdown()
+
+
+app.add_event_handler("startup", lambda: startup_event())
+app.add_event_handler("shutdown", lambda: shutdown_event())
 
 
 @app.middleware("http")
 async def add_cors_headers(request: Request, call_next):
-    logging.warning(request.headers)
+    # logging.warning(request.headers)
     response = await call_next(request)
     origin = request.headers.get("origin")
     if origin in allowed_origins:
@@ -80,7 +104,7 @@ async def add_cors_headers(request: Request, call_next):
 
 @app.middleware("http")
 async def check_session_key(request: Request, call_next):
-    logging.warning(request.headers)
+    # logging.warning(request.headers)
 
     if request.url.path.startswith("/static/"):
         # Allow static file requests to pass through
@@ -141,19 +165,6 @@ async def favicon():
     return FileResponse("static/favicon.ico")
 
 
-# Define a Pydantic model for the request body
-class PyMessage(BaseModel):
-    text: str
-    classSelection: str
-    lesson: str
-    actionPlan: str
-
-
-# Define a Pydantic model for the response body
-class PyResponse(BaseModel):
-    text: str
-
-
 # Define your chatbot logic
 def generate_response(p_session_key, p_Request):
 
@@ -183,6 +194,23 @@ def generate_response(p_session_key, p_Request):
 @app.post("/chatbot/")
 def chatbot_endpoint(request: Request, message: PyMessage) -> JSONResponse:
     session_key = request.cookies.get("session_key")
+
+    if not session_key:
+        raise HTTPException(status_code=401, detail="Session key is missing")
+
+    if cloud_mode_enabled:
+        access_key = message.accessKey
+
+        is_valid_key = validate_access_key(access_key, session_key)
+
+        if not is_valid_key:
+            raise HTTPException(status_code=403, detail="Invalid access key")
+        else:
+            logging.warning(
+                f"Session ({session_key}) validated access key ({access_key})",
+                extra={"sessionKey": session_key, "accessKey": access_key},
+            )
+
     response_text = generate_response(session_key, message)
 
     #    logging.warning(f"Received chatbot request ({message.text}), response ({response_text})", extra={'sessionKey': session_key})  # Debug statement
@@ -213,11 +241,7 @@ def delete_session(
 async def list_class_directories(request: Request):
     try:
         session_key = request.cookies.get("session_key")
-        directories = [
-            d
-            for d in os.listdir(classes_directory)
-            if os.path.isdir(os.path.join(classes_directory, d))
-        ]
+        directories = list_directory("classes", "directory")
 
         logging.warning(
             f"Loaded classes ({directories})", extra={"sessionKey": session_key}
@@ -235,18 +259,10 @@ async def list_class_directories(request: Request):
 
 @app.get("/classes/{class_directory}")
 async def get_class_configuration(class_directory: str, request: Request):
-    directory_path = os.path.join(classes_directory, class_directory)
 
-    conundrums_directory_path = os.path.normpath(
-        os.path.join(directory_path, "conundrums")
-    )
-    action_plans_file_path = os.path.normpath(
-        os.path.join(directory_path, "actionplans")
-    )
+    conundrums_path = f"classes/{class_directory}/conundrums"
 
-    print(f"Conundrums directory path: {conundrums_directory_path}")
-
-    print(f"Action plans file path: {action_plans_file_path}")
+    action_plans_path = f"classes/{class_directory}/actionplans"
 
     session_key = request.cookies.get("session_key") or "unknown"
     session_cache = session_manager.get_session(session_key)
@@ -254,41 +270,36 @@ async def get_class_configuration(class_directory: str, request: Request):
     if session_cache is None:
         raise HTTPException(status_code=404, detail="Could not locate Session Key")
 
-    try:
-        non_existent_directory = not os.path.exists(
-            conundrums_directory_path
-        ) or not os.path.exists(action_plans_file_path)
-        if non_existent_directory:
-            logging.error(
-                f"Directory does not exist: {non_existent_directory}",
-                extra={"sessionKey": session_key},
-            )
-            raise HTTPException(status_code=404, detail="Directory does not exist")
+    conundrums_path_exists = check_directory_exists(conundrums_path)
+    action_plans_path_exists = check_directory_exists(action_plans_path)
 
-        not_a_directory = not os.path.isdir(
-            conundrums_directory_path
-        ) or not os.path.isdir(action_plans_file_path)
-        if not_a_directory:
+    try:
+        non_existent_directory = (
+            conundrums_path
+            if not conundrums_path_exists
+            else action_plans_path if not action_plans_path_exists else None
+        )
+
+        if non_existent_directory:
+            error_message = f"Directory does not exist: {non_existent_directory}"
             logging.error(
-                f"Path is not a directory: {not_a_directory}",
+                error_message,
                 extra={"sessionKey": session_key},
             )
-            raise HTTPException(status_code=400, detail="Path is not a directory")
+            raise HTTPException(status_code=404, detail=error_message)
 
         lessons = [
-            f
-            for f in os.listdir(conundrums_directory_path)
-            if os.path.isfile(os.path.join(conundrums_directory_path, f))
-            and f.endswith(".txt")
+            lesson
+            for lesson in list_directory(conundrums_path, "file")
+            if lesson.endswith(".txt")
         ]
 
         lessons.sort()
 
         action_plans = [
-            f
-            for f in os.listdir(action_plans_file_path)
-            if os.path.isfile(os.path.join(action_plans_file_path, f))
-            and f.endswith(".txt")
+            action_plan
+            for action_plan in list_directory(action_plans_path, "file")
+            if action_plan.endswith(".txt")
         ]
 
         action_plans.sort()
@@ -321,6 +332,12 @@ async def send_conversation(request: Request, payload: dict):
 
     if valid_email is None or email is None:
         raise HTTPException(status_code=400, detail="Invalid email address")
+
+    if not mailgun_enabled:
+        raise HTTPException(
+            status_code=500,
+            detail="Sending conversations by email is currently disabled",
+        )
 
     class_name = payload.get("classSelection") or "Unknown"
     lesson = payload.get("lesson") or "Unknown"
@@ -384,6 +401,6 @@ if __name__ == "__main__":
 
     logging.warning("Logging setup is configured and running TutorBot_Server")
 
-    print("running TutorBot_Server")
+    subprocess.run(["pyppeteer-install"], shell=True)
 
     uvicorn.run("TutorBot_Server:app", host="0.0.0.0", port=8000)

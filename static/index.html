@@ -16,6 +16,8 @@
             <br>
             <!-- Dropdowns for selecting class and lesson -->
             <div>
+                <label style="font-weight: bold;" for="accessKey">Access Key:</label>
+                <input id="accessKey" autofocus name="accessKey" type="text" class="access-key-input" placeholder="Enter your access key" required>
 
                 <label for="classDropdown" style="font-weight: bold;">Class:</label>
                 <select id="classDropdown">
@@ -23,7 +25,9 @@
                         Select a class
                     </option>
                 </select>
-                <br>
+            </div>
+            <br>
+            <div>
                 <label for="lessonDropdown" style="font-weight: bold;">Conundrum:</label>
                 <select id="lessonDropdown">
                     <option value="">
@@ -54,6 +58,12 @@
                 <textarea id="userInput" class="user-input"></textarea>
                 <button id="sendButton">Send</button>
             </div>
+        </div>
+
+        <div>
+            <p id="messageSubmissionStatus" style="display: none;" class="red-bold">
+
+            </p>
         </div>
     </div>
     <footer>
@@ -186,8 +196,11 @@
         // Function to send a message to the chatbot
         async function sendMessage() {
             try {
+                const accessKey = document.getElementById('accessKey').value;
+
                 const userInputElement = document.getElementById('userInput');
                 const userInput = userInputElement.value;
+
                 const responseOutput = document.getElementById('responseOutput');
                 const thinkingIndicator = document.getElementById('thinkingIndicator');
 
@@ -195,12 +208,18 @@
                 const lessonDropdown = document.getElementById('lessonDropdown');
                 const actionPlanDropdown = document.getElementById('actionPlanDropdown');
 
+
+                const messageSubmissionStatusComponent = document.getElementById("messageSubmissionStatus");
+
+                messageSubmissionStatusComponent.style.display = "none";
+
                 toggleThinkingIndicator(thinkingIndicator, true); // Show the thinking indicator
 
                 const response = await fetch(`${baseURL}/chatbot/`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        accessKey: accessKey,
                         text: userInput,
                         classSelection: classDropdown.value,
                         lesson: lessonDropdown.value,
@@ -211,7 +230,16 @@
 
                 toggleThinkingIndicator(thinkingIndicator, false); // Hide the thinking indicator
 
-                if (!response.ok) throw new Error(`Failed to send message: ${response.statusText}`);
+                if (!response.ok) {
+
+                    const errorData = await response.json();
+
+
+                    messageSubmissionStatusComponent.textContent = errorData.detail;
+                    messageSubmissionStatusComponent.style.display = "block";
+
+                    throw new Error(`Failed to send message: ${response.statusText}`);
+                }
                 const data = await response.json();
                 updateChat(responseOutput, userInput, data.text); // Update the chat area with the bot's response
 
