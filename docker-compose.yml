@@ -1,0 +1,31 @@
+services:
+  app:
+    platform: linux/x86_64
+    build: .
+    ports:
+      - "8000:80"
+    volumes:
+      - .:/code
+    environment:
+      - CLOUD_MODE=${CLOUD_MODE:-true}
+      - S3_BUCKET_ENDPOINT=${S3_BUCKET_ENDPOINT}
+      - S3_BUCKET_ACCESS_KEY=${S3_BUCKET_ACCESS_KEY}
+      - S3_BUCKET_ACCESS_SECRET=${S3_BUCKET_ACCESS_SECRET}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - MAILGUN_ENABLED=${MAILGUN_ENABLED:-false}
+      - MAILGUN_API_KEY=${MAILGUN_API_KEY}
+      - MAILGUN_API_URL=${MAILGUN_API_URL}
+      - MAILGUN_FROM_ADDRESS=${MAILGUN_FROM_ADDRESS}
+      - PYPPETEER_EXECUTABLE_PATH=${PYPPETEER_EXECUTABLE_PATH}
+      - PYPPETEER_CHROMIUM_REVISION=${PYPPETEER_CHROMIUM_REVISION}
+      - MODEL_PROVIDER=${MODEL_PROVIDER:-OPENAI}
+      - MODEL=${MODEL:-chatgpt-4o-latest}
+      - API_KEY=${API_KEY}
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - "bash -c ':> /dev/tcp/127.0.0.1/8000' || exit 1"
+      interval: 5s
+      timeout: 20s
+      retries: 3
