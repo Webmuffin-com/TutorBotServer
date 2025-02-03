@@ -1,8 +1,6 @@
 services:
   app:
     build: .
-    ports:
-      - "${PORT}:80"
     volumes:
       - .:/code
     environment:

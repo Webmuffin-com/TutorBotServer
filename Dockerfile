@@ -32,4 +32,6 @@ COPY ./LLM_Handler.py /code/LLM_Handler.py
 COPY ./SessionCache.py /code/SessionCache.py
 COPY ./TutorBot_Server.py /code/TutorBot_Server.py
 
+EXPOSE 8000
+
 CMD ["python", "TutorBot_Server.py"]
