@@ -4,22 +4,25 @@ WORKDIR /code
 
 COPY ./requirements-unix.txt /code/requirements-unix.txt
 
-RUN pip install --no-cache-dir --upgrade -r /code/requirements-unix.txt
+# RUN apk update && apk add python3-dev \
+#   g++ \
+#   gcc \
+#   build-essential \
+#   libc-dev \
+#   libffi-dev \
+#   chromium
 
 RUN apt-get update && apt-get install -y \
-  apt-transport-https \
-  ca-certificates \
-  curl \
-  gnupg \
-  --no-install-recommends \
-  && curl -sSL https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
-  && echo "deb [arch=amd64] https://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list \
-  && apt-get update && apt-get install -y \
-  google-chrome-stable \
-  --no-install-recommends
+  chromium
 
-RUN groupadd chrome && useradd -g chrome -s /bin/bash -G audio,video chrome \
-  && mkdir -p /home/chrome && chown -R chrome:chrome /home/chrome
+RUN which chromium
+
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+  PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+RUN pip install --upgrade pip 
+
+RUN pip install --no-cache-dir --upgrade -r /code/requirements-unix.txt
 
 COPY ./static /code/static
 COPY ./utils /code/utils
