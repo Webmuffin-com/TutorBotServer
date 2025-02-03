@@ -10,7 +10,6 @@ from fastapi.responses import (
 )
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
-from starlette.templating import Jinja2Templates
 import logging
 import uuid
 import uvicorn
@@ -20,14 +19,18 @@ from apscheduler.triggers.cron import CronTrigger
 from utils.types import PyMessage
 
 
-# Load environmental variables file from env.txt
-load_dotenv("env.txt")
+# Load environmental variables file from .env
+load_dotenv()
 
 from utils.logging import (  # noqa: E402
     drain_logs_to_s3,
     setup_csv_logging,
 )
-from constants import cloud_mode_enabled, mailgun_enabled  # noqa: E402
+from constants import (  # noqa: E402
+    cloud_mode_enabled,
+    mailgun_enabled,
+    pyppeteer_executable_path,
+)
 
 
 from utils.pdf import generate_conversation_pdf  # noqa: E402
@@ -48,7 +51,6 @@ def get_session_manager():
 app = FastAPI(title="TutorBot", description="Your personal tutor", version="0.0.1")
 # Mount the static files directory
 app.mount("/static", StaticFiles(directory="static"), name="static")
-template = Jinja2Templates(directory="templates")
 # Allow all local network computers (example for 192.168.1.x range)
 # allowed_origins = ["http://127.0.0.1:8000", "http://localhost:8000", "https://127.0.0.1:8000", "https://localhost:8000"]
 allowed_origins = ["*"]
@@ -401,6 +403,7 @@ if __name__ == "__main__":
 
     logging.warning("Logging setup is configured and running TutorBot_Server")
 
-    subprocess.run(["pyppeteer-install"], shell=True)
+    if pyppeteer_executable_path is None:
+        subprocess.run(["pyppeteer-install"], shell=True)
 
     uvicorn.run("TutorBot_Server:app", host="0.0.0.0", port=8000)

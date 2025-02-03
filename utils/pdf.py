@@ -1,9 +1,7 @@
 from fastapi import HTTPException
 from pyppeteer import launch
 
-from constants import (
-    system_encoding,
-)
+from constants import system_encoding, pyppeteer_executable_path
 
 from SessionCache import session_manager
 from utils.llm import format_conversation
@@ -65,7 +63,11 @@ async def generate_conversation_pdf(
 
 
 async def create_pdf(html):
-    browser = await launch()
+    browser = await launch(
+        executablePath=pyppeteer_executable_path,
+        headless=True,
+        args=["--no-sandbox"],
+    )
     page = await browser.newPage()
 
     await page.setContent(html)

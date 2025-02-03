@@ -17,7 +17,7 @@ The design is simple and can be easily modified for different use cases.
 
 ## Pre requisites
 
-In order to set the required secrets you need to duplicate the file `env.example.txt` and name it `env.txt` and fill its contents with the corresponding secrets.
+In order to set the required secrets you need to duplicate the file `.env.example` and name it `.env` and fill its contents with the corresponding secrets.
 
 ### Create virtual environment
 

@@ -51,6 +51,11 @@ if not s3_bucket_path and cloud_mode_enabled:
     logging.error(error_message)
     raise ValueError(error_message)
 
+pyppeteer_executable_path = typing.cast(str, os.getenv("PYPPETEER_EXECUTABLE_PATH"))
+if not pyppeteer_executable_path:
+    error_message = "Pyppeteer executable path not set, using default path"
+
+    logging.warning(error_message)
 
 mailgun_enabled = typing.cast(bool, os.getenv("MAILGUN_ENABLED") == "true")
 if not mailgun_enabled:
