@@ -4,21 +4,13 @@ WORKDIR /code
 
 COPY ./requirements-unix.txt /code/requirements-unix.txt
 
-# RUN apk update && apk add python3-dev \
-#   g++ \
-#   gcc \
-#   build-essential \
-#   libc-dev \
-#   libffi-dev \
-#   chromium
-
 RUN apt-get update && apt-get install -y \
   chromium
 
 RUN which chromium
 
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-  PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+  PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 RUN pip install --upgrade pip 
 

@@ -24,6 +24,6 @@ services:
       test:
         - CMD-SHELL
         - "bash -c ':> /dev/tcp/127.0.0.1/${PORT}' || exit 1"
-      interval: 5s
-      timeout: 20s
+      interval: 15s
+      timeout: 10s
       retries: 3
