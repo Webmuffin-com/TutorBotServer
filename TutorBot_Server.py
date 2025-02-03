@@ -30,6 +30,7 @@ from constants import (  # noqa: E402
     cloud_mode_enabled,
     mailgun_enabled,
     pyppeteer_executable_path,
+    port,
 )
 
 
@@ -52,7 +53,6 @@ app = FastAPI(title="TutorBot", description="Your personal tutor", version="0.0.
 # Mount the static files directory
 app.mount("/static", StaticFiles(directory="static"), name="static")
 # Allow all local network computers (example for 192.168.1.x range)
-# allowed_origins = ["http://127.0.0.1:8000", "http://localhost:8000", "https://127.0.0.1:8000", "https://localhost:8000"]
 allowed_origins = ["*"]
 # Add CORS middleware
 app.add_middleware(
@@ -406,4 +406,4 @@ if __name__ == "__main__":
     if pyppeteer_executable_path is None:
         subprocess.run(["pyppeteer-install"], shell=True)
 
-    uvicorn.run("TutorBot_Server:app", host="0.0.0.0", port=8000)
+    uvicorn.run("TutorBot_Server:app", host="0.0.0.0", port=port)

@@ -10,6 +10,15 @@ local_assets_path = os.path.normpath(current_working_path)
 if not os.path.exists(local_assets_path):
     logging.error(f"Classes path not found at {local_assets_path}")
 
+
+port = typing.cast(int, os.getenv("PORT"))
+if not port:
+    error_message = "Port not set"
+    logging.error(error_message)
+
+    raise ValueError(error_message)
+
+
 cloud_mode_enabled = typing.cast(bool, os.getenv("CLOUD_MODE") == "true")
 if not cloud_mode_enabled:
     logging.warning(

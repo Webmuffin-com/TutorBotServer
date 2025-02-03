@@ -99,7 +99,7 @@ In order to run the development server follow this steps:
 python ./TutorBot_Server.py
 ```
 
-- Test the application by opening the url: `http://localhost:8000`
+- Test the application by opening the url: `http://localhost:${PORT_FROM_ENV_VARS}`
 
 ## Build executable bundles
 
