@@ -82,8 +82,10 @@ def initialize_llm():
                 timeout=timeout,
                 temperature=temperature,
                 top_p=top_p,
-                frequency_penalty=frequency_penalty,
-                presence_penalty=presence_penalty,
+                model_kwargs={
+                    "frequency_penalty": frequency_penalty,
+                    "presence_penalty": presence_penalty,
+                },
                 api_key=api_key,
                 stop=None,
             )

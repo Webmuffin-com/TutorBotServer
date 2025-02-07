@@ -11,12 +11,7 @@ if not os.path.exists(local_assets_path):
     logging.error(f"Classes path not found at {local_assets_path}")
 
 
-port = typing.cast(int, os.getenv("PORT"))
-if not port:
-    error_message = "Port not set"
-    logging.error(error_message)
-
-    raise ValueError(error_message)
+port = int(os.getenv("PORT") or 3000)
 
 
 cloud_mode_enabled = typing.cast(bool, os.getenv("CLOUD_MODE") == "true")
@@ -109,33 +104,25 @@ if not api_key and model_provider != "GOOGLE":
     logging.error("Problems loading key because API_KEY environment variable not set")
     raise ValueError("API_KEY environment variable not set")
 
-max_tokens = typing.cast(int, os.getenv("MAX_TOKENS"))
-if not max_tokens:
-    max_tokens = 10000
+max_tokens = int(os.getenv("MAX_TOKENS") or 10000)
 
-max_retries = typing.cast(int, os.getenv("MAX_RETRIES"))
-if not max_retries:
-    max_retries = 2
+max_retries = int(os.getenv("MAX_RETRIES") or "2")
 
-timeout = typing.cast(int, os.getenv("TIMEOUT"))
-if not timeout:
-    timeout = 60
+timeout = int(os.getenv("TIMEOUT") or "60")
 
-temperature = typing.cast(float, os.getenv("TEMPERATURE"))
-if not temperature:
-    temperature = 0.7
+temperature = float(os.getenv("TEMPERATURE") or "0.7")
 
-top_p = typing.cast(float, os.getenv("TOP_P"))
-if not top_p:
-    top_p = None
+top_p = None
+if os.getenv("TOP_P"):
+    top_p = float(os.getenv("TOP_P"))  # type: ignore
 
-frequency_penalty = typing.cast(float, os.getenv("FREQUENCY_PENALTY"))
-if not frequency_penalty:
-    frequency_penalty = None
+frequency_penalty = None
+if os.getenv("FREQUENCY_PENALTY"):
+    frequency_penalty = float(os.getenv("FREQUENCY_PENALTY"))  # type: ignore
 
-presence_penalty = typing.cast(float, os.getenv("PRESENCE_PENALTY"))
-if not presence_penalty:
-    presence_penalty = None
+presence_penalty = None
+if os.getenv("PRESENCE_PENALTY"):
+    presence_penalty = float(os.getenv("PRESENCE_PENALTY"))  # type: ignore
 
 ibm_url = typing.cast(SecretStr, os.getenv("IBM_URL"))
 if not ibm_url:
