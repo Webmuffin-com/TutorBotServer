@@ -415,6 +415,10 @@ if __name__ == "__main__":
 
     logging.warning("Logging setup is configured and running TutorBot_Server")
 
+    logging.warning(f"Model: {model}")
+    logging.warning(f"Top P: {top_p}")
+    logging.warning(f"Temperature: {temperature}")
+
     if pyppeteer_executable_path is None:
         subprocess.run(["pyppeteer-install"], shell=True)
 
