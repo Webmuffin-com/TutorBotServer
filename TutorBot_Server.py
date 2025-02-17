@@ -75,13 +75,13 @@ def startup_event():
 
     setup_csv_logging()
     logging.warning("Application startup")
-    logging.info(f"Model: {model}")
-    logging.info(f"Top P: {top_p}")
-    logging.info(f"Temperature: {temperature}")
+    logging.warning(f"Model: {model}")
+    logging.warning(f"Top P: {top_p}")
+    logging.warning(f"Temperature: {temperature}")
     if frequency_penalty:
-        logging.info(f"Frequency Penalty: {frequency_penalty}")
+        logging.warning(f"Frequency Penalty: {frequency_penalty}")
     if presence_penalty:
-        logging.info(f"Presence Penalty: {presence_penalty}")
+        logging.warning(f"Presence Penalty: {presence_penalty}")
 
     if cloud_mode_enabled:
         scheduler = BackgroundScheduler()
