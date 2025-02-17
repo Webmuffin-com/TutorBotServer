@@ -31,6 +31,11 @@ from constants import (  # noqa: E402
     mailgun_enabled,
     pyppeteer_executable_path,
     port,
+    model,
+    top_p,
+    temperature,
+    frequency_penalty,
+    presence_penalty,
 )
 
 
@@ -70,6 +75,13 @@ def startup_event():
 
     setup_csv_logging()
     logging.warning("Application startup")
+    logging.info(f"Model: {model}")
+    logging.info(f"Top P: {top_p}")
+    logging.info(f"Temperature: {temperature}")
+    if frequency_penalty:
+        logging.info(f"Frequency Penalty: {frequency_penalty}")
+    if presence_penalty:
+        logging.info(f"Presence Penalty: {presence_penalty}")
 
     if cloud_mode_enabled:
         scheduler = BackgroundScheduler()
