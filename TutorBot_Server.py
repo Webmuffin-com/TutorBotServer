@@ -335,6 +335,20 @@ async def get_class_configuration(class_directory: str, request: Request):
         raise HTTPException(status_code=500, detail="Error listing files in directory")
 
 
+@app.get("/conversation/clear")
+async def clear_conversation(request: Request):
+    session_key = request.cookies.get("session_key")
+
+    if session_key is None:
+        raise HTTPException(status_code=401, detail="Session key is missing")
+
+    session_cache = session_manager.get_session(session_key)
+
+    session_cache.m_simpleCounterLLMConversation.clear()
+
+    return JSONResponse(content={"message": "Conversation cleared"})
+
+
 @app.post("/send-conversation")
 async def send_conversation(request: Request, payload: dict):
     session_key = request.cookies.get("session_key")
