@@ -16,8 +16,11 @@ RUN pip install --upgrade pip
 
 RUN pip install --no-cache-dir --upgrade -r /code/requirements-unix.txt
 
+RUN rm -rf /code/*
 RUN rm -rf /code
-RUN mkdir /code
+RUN ls -l /code
+
+#RUN mkdir /code
 
 COPY ./static /code/static
 COPY ./utils /code/utils
