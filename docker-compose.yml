@@ -22,6 +22,11 @@ services:
       - MODEL=${MODEL:-chatgpt-4o-latest}
       - API_KEY=${API_KEY}
       - PORT=${PORT}
+      - TIMEOUT=${TIMEOUT:-60}
+      - TEMPERATURE=${TEMPERATURE}
+      - TOP_P=${TOP_P}
+      - FREQUENCY_PENALTY=${FREQUENCY_PENALTY}
+      - PRESENCE_PENALTY=${PRESENCE_PENALTY}
     healthcheck:
       test:
         - CMD-SHELL
