@@ -16,6 +16,8 @@ RUN pip install --upgrade pip
 
 RUN pip install --no-cache-dir --upgrade -r /code/requirements-unix.txt
 
+RUN rm -rf /code/*
+
 COPY ./static /code/static
 COPY ./utils /code/utils
 COPY ./constants.py /code/constants.py
