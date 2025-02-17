@@ -112,22 +112,18 @@ max_retries = int(os.getenv("MAX_RETRIES") or "2")
 timeout = int(os.getenv("TIMEOUT") or "60")
 
 temperature = float(os.getenv("TEMPERATURE") or "0.7")
-logging.info(f"temperature: {temperature}")
 
 top_p = None
 if os.getenv("TOP_P"):
     top_p = float(os.getenv("TOP_P"))  # type: ignore
-logging.info(f"top_p: {top_p}")
 
 frequency_penalty = None
 if os.getenv("FREQUENCY_PENALTY"):
     frequency_penalty = float(os.getenv("FREQUENCY_PENALTY"))  # type: ignore
-    logging.info(f"frequency_penalty: {frequency_penalty}")
 
 presence_penalty = None
 if os.getenv("PRESENCE_PENALTY"):
     presence_penalty = float(os.getenv("PRESENCE_PENALTY"))  # type: ignore
-    logging.info(f"presence_penalty: {presence_penalty}")
 
 ibm_url = typing.cast(SecretStr, os.getenv("IBM_URL"))
 if not ibm_url:

@@ -74,12 +74,13 @@ scheduler = None
 def startup_event():
 
     setup_csv_logging()
-    logging.warning("Application startup")
-    logging.warning(f"Model: {model}")
-    logging.warning(f"Top P: {top_p}")
-    logging.warning(f"Temperature: {temperature}")
+    logging.info("Application startup")
+    logging.info(f"Model: {model}")
+    logging.info(f"Temperature: {temperature}")
+    if top_p:
+        logging.info(f"Top P: {top_p}")
     if frequency_penalty:
-        logging.warning(f"Frequency Penalty: {frequency_penalty}")
+        logging.info(f"Frequency Penalty: {frequency_penalty}")
     if presence_penalty:
         logging.warning(f"Presence Penalty: {presence_penalty}")
 
@@ -414,10 +415,6 @@ if __name__ == "__main__":
     # This configures the logging utilities so outputs are csv files that can be read with a spreadsheet editor
 
     logging.warning("Logging setup is configured and running TutorBot_Server")
-
-    logging.warning(f"Model: {model}")
-    logging.warning(f"Top P: {top_p}")
-    logging.warning(f"Temperature: {temperature}")
 
     if pyppeteer_executable_path is None:
         subprocess.run(["pyppeteer-install"], shell=True)
