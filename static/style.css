@@ -16,8 +16,6 @@ body {
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	background-color: #004210;
-	color: #666;
 	overflow: hidden; /* Prevents extra scrolling */
 }
 
@@ -37,10 +35,9 @@ body {
 .container {
 	background-color: #ffffff;
 	border-radius: 10px;
-	box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-	padding: 2rem;
-	width: 90dvw; /* Responsive width */
-	height: 85dvh; /* Take 85% of the viewport height */
+	padding-top: 2rem;
+	width: 95dvw;
+	height: 100%;
 	max-width: 1400px;
 	display: flex;
 	flex-direction: column;
@@ -51,7 +48,6 @@ body {
 
 .chat-area {
 	background-color: #ffffff;
-	border-radius: 10px;
 	width: 100%; /* Takes full width of the container */
 	display: flex;
 	flex-direction: column;
@@ -148,6 +144,18 @@ button:hover {
 	background-color: #0056b3;
 }
 
+input.access-key-input {
+	background-color: whitesmoke;
+	color: #004210;
+	border: 1px solid #ccc;
+	padding: 0.35rem 0.5rem;
+	margin: 0 0.5rem;
+	border-radius: 5px;
+	font-size: 16px;
+	cursor: pointer;
+	min-width: 200px;
+}
+
 input.user-input {
 	width: 100%;
 	padding: 10px;
@@ -173,10 +181,9 @@ textarea.user-input {
 
 /* Center the footer */
 footer {
-	width: 90vh;
-	max-width: 1200px;
+	width: 100%;
 	text-align: center;
-	margin-top: 10px;
+	margin: 10px 0;
 }
 
 pre {

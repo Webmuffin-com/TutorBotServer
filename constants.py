@@ -5,12 +5,88 @@ import logging
 from pydantic import SecretStr
 
 
-# Define the path to the 'classes' directory within the current working directory
-current_working_directory = os.getcwd()
-classes_directory = os.path.normpath(os.path.join(current_working_directory, "classes"))
+current_working_path = os.getcwd()
+local_assets_path = os.path.normpath(current_working_path)
+if not os.path.exists(local_assets_path):
+    logging.error(f"Classes path not found at {local_assets_path}")
 
-if not os.path.exists(classes_directory):
-    logging.error(f"Classes directory not found at {classes_directory}")
+
+port = int(os.getenv("PORT") or 3000)
+
+
+cloud_mode_enabled = typing.cast(bool, os.getenv("CLOUD_MODE") == "true")
+if not cloud_mode_enabled:
+    logging.warning(
+        "Cloud mode is not enabled because CLOUD_MODE environment variable not set, files for classes will be retrieved from the local filesystem"
+    )
+
+s3_bucket_endpoint = typing.cast(str, os.getenv("S3_BUCKET_ENDPOINT"))
+if not s3_bucket_endpoint and cloud_mode_enabled:
+    error_message = "Cloud mode is enabled but the required environment variable S3_BUCKET_ENDPOINT is not set."
+
+    logging.error(error_message)
+    raise ValueError(error_message)
+
+s3_bucket_access_key = typing.cast(SecretStr, os.getenv("S3_BUCKET_ACCESS_KEY"))
+if not s3_bucket_access_key and cloud_mode_enabled:
+    error_message = "Cloud mode is enabled but the required environment variable S3_BUCKET_ACCESS_KEY is not set."
+
+    logging.error(error_message)
+    raise ValueError(error_message)
+
+s3_bucket_access_secret = typing.cast(SecretStr, os.getenv("S3_BUCKET_ACCESS_SECRET"))
+if not s3_bucket_access_secret and cloud_mode_enabled:
+    error_message = "Cloud mode is enabled but the required environment variable S3_BUCKET_ACCESS_SECRET is not set."
+
+    logging.error(error_message)
+    raise ValueError(error_message)
+
+s3_bucket_name = typing.cast(str, os.getenv("S3_BUCKET_NAME"))
+if not s3_bucket_name and cloud_mode_enabled:
+    error_message = "Cloud mode is enabled but the required environment variable S3_BUCKET_NAME is not set."
+
+    logging.error(error_message)
+    raise ValueError(error_message)
+
+s3_bucket_path = typing.cast(str, os.getenv("S3_BUCKET_PATH"))
+if not s3_bucket_path and cloud_mode_enabled:
+    error_message = "Cloud mode is enabled but the required environment variable S3_BUCKET_PATH is not set."
+
+    logging.error(error_message)
+    raise ValueError(error_message)
+
+pyppeteer_executable_path = typing.cast(str, os.getenv("PYPPETEER_EXECUTABLE_PATH"))
+if not pyppeteer_executable_path:
+    error_message = "Pyppeteer executable path not set, using default path"
+
+    logging.warning(error_message)
+
+mailgun_enabled = typing.cast(bool, os.getenv("MAILGUN_ENABLED") == "true")
+if not mailgun_enabled:
+    logging.warning(
+        "Mailgun is not enabled because MAILGUN_ENABLED environment variable not set, users wont be able to send conversations to their email"
+    )
+
+mailgun_api_url = typing.cast(str, os.getenv("MAILGUN_API_URL"))
+if not mailgun_api_url and mailgun_enabled:
+    error_message = "Mailgun is enabled but the required environment variable MAILGUN_API_URL is not set."
+
+    logging.error(error_message)
+    raise ValueError(error_message)
+
+mailgun_api_key = typing.cast(str, os.getenv("MAILGUN_API_KEY"))
+if not mailgun_api_key and mailgun_enabled:
+    error_message = "Mailgun is enabled but the required environment variable MAILGUN_API_KEY is not set."
+
+    logging.error(error_message)
+    raise ValueError(error_message)
+
+mailgun_from_address = typing.cast(str, os.getenv("MAILGUN_FROM_ADDRESS"))
+if not mailgun_from_address and mailgun_enabled:
+    error_message = "Mailgun is enabled but the required environment variable MAILGUN_FROM_ADDRESS is not set."
+
+    logging.error(error_message)
+    raise ValueError(error_message)
 
 
 model_provider = typing.cast(str, os.getenv("MODEL_PROVIDER"))
@@ -22,39 +98,32 @@ model = typing.cast(str, os.getenv("MODEL"))
 if not model:
     logging.error("No model selected, using atgpt-4o-latest as default")
     model = "chatgpt-4o-latest"
+logging.info(f"model: {model}")
 
 api_key = typing.cast(SecretStr, os.getenv("API_KEY"))
 if not api_key and model_provider != "GOOGLE":
     logging.error("Problems loading key because API_KEY environment variable not set")
     raise ValueError("API_KEY environment variable not set")
 
-max_tokens = typing.cast(int, os.getenv("MAX_TOKENS"))
-if not max_tokens:
-    max_tokens = 10000
+max_tokens = int(os.getenv("MAX_TOKENS") or 10000)
 
-max_retries = typing.cast(int, os.getenv("MAX_RETRIES"))
-if not max_retries:
-    max_retries = 2
+max_retries = int(os.getenv("MAX_RETRIES") or "2")
 
-timeout = typing.cast(int, os.getenv("TIMEOUT"))
-if not timeout:
-    timeout = 60
+timeout = int(os.getenv("TIMEOUT") or "60")
 
-temperature = typing.cast(float, os.getenv("TEMPERATURE"))
-if not temperature:
-    temperature = 0.7
+temperature = float(os.getenv("TEMPERATURE") or "0.7")
 
-top_p = typing.cast(float, os.getenv("TOP_P"))
-if not top_p:
-    top_p = None
+top_p = None
+if os.getenv("TOP_P"):
+    top_p = float(os.getenv("TOP_P"))  # type: ignore
 
-frequency_penalty = typing.cast(float, os.getenv("FREQUENCY_PENALTY"))
-if not frequency_penalty:
-    frequency_penalty = None
+frequency_penalty = None
+if os.getenv("FREQUENCY_PENALTY"):
+    frequency_penalty = float(os.getenv("FREQUENCY_PENALTY"))  # type: ignore
 
-presence_penalty = typing.cast(float, os.getenv("PRESENCE_PENALTY"))
-if not presence_penalty:
-    presence_penalty = None
+presence_penalty = None
+if os.getenv("PRESENCE_PENALTY"):
+    presence_penalty = float(os.getenv("PRESENCE_PENALTY"))  # type: ignore
 
 ibm_url = typing.cast(SecretStr, os.getenv("IBM_URL"))
 if not ibm_url:
@@ -67,27 +136,6 @@ if not ibm_project_id and model_provider == "IBM":
     )
     raise ValueError("IBM_PROJECT_ID environment variable not set")
 
-mailgun_api_url = typing.cast(str, os.getenv("MAILGUN_API_URL"))
-if not mailgun_api_url:
-    logging.error(
-        "Problems loading url because MAILGUN_API_URL environment variable not set"
-    )
- #   raise ValueError("MAILGUN_API_URL environment variable not set")
-
-mailgun_api_key = typing.cast(str, os.getenv("MAILGUN_API_KEY"))
-if not mailgun_api_key:
-    logging.error(
-        "Problems loading key because MAILGUN_API_KEY environment variable not set"
-    )
- #   raise ValueError("MAILGUN_API_KEY environment variable not set")
-
-mailgun_from_address = typing.cast(str, os.getenv("MAILGUN_FROM_ADDRESS"))
-if not mailgun_from_address:
-    logging.error(
-        "Problems loading from address because MAILGUN_FROM_ADDRESS environment variable not set"
-    )
- #   raise ValueError("MAILGUN_FROM_ADDRESS environment variable not set")
-
-encoding = (
+system_encoding = (
     "utf-8" if platform.system() == "Windows" else None
-)  # None uses the default encoding in Linux
+)  # None uses the default system_encoding in Linux

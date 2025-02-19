@@ -13,9 +13,9 @@
         <div class="header"> <!-- Header section with title and instructions -->
             <h1>TutorBot Learning Center</h1>
             <p>Select your class from the dropdown below and then select the lesson you would like to work on.</p>
-            <br>
-            <!-- Dropdowns for selecting class and lesson -->
             <div>
+                <label style="font-weight: bold;" for="accessKey">Access Key:</label>
+                <input id="accessKey" autofocus name="accessKey" type="text" class="access-key-input" placeholder="Enter your access key" required>
 
                 <label for="classDropdown" style="font-weight: bold;">Class:</label>
                 <select id="classDropdown">
@@ -23,7 +23,8 @@
                         Select a class
                     </option>
                 </select>
-                <br>
+            </div>
+            <div>
                 <label for="lessonDropdown" style="font-weight: bold;">Conundrum:</label>
                 <select id="lessonDropdown">
                     <option value="">
@@ -55,12 +56,19 @@
                 <button id="sendButton">Send</button>
             </div>
         </div>
+
+        <div>
+            <p id="messageSubmissionStatus" style="display: none;" class="red-bold">
+
+            </p>
+        </div>
     </div>
     <footer>
         <!-- Send button for submitting requests -->
 
         <button id="copyButton">Copy Conversation</button><button id="requestConversationDownload">Download Conversation</button>
         <button id="requestConversation">Send Conversation</button>
+        <button id="clearConversation">Clear Conversation</button>
     </footer>
 
     <!-- DIALOG -->
@@ -186,8 +194,28 @@
         // Function to send a message to the chatbot
         async function sendMessage() {
             try {
+
+                const messageSubmissionStatusComponent = document.getElementById("messageSubmissionStatus");
+
+                messageSubmissionStatusComponent.style.display = "none";
+
+
+                const accessKey = document.getElementById('accessKey').value;
+
                 const userInputElement = document.getElementById('userInput');
                 const userInput = userInputElement.value;
+
+                if (!userInput) {
+                    const errorMessage = "Please enter a request.";
+
+                    messageSubmissionStatusComponent.textContent = errorMessage;
+                    messageSubmissionStatusComponent.style.display = "block";
+
+                    throw new Error(`Failed to send message: ${errorMessage}`);
+
+                    return;
+                }
+
                 const responseOutput = document.getElementById('responseOutput');
                 const thinkingIndicator = document.getElementById('thinkingIndicator');
 
@@ -195,12 +223,15 @@
                 const lessonDropdown = document.getElementById('lessonDropdown');
                 const actionPlanDropdown = document.getElementById('actionPlanDropdown');
 
+
+
                 toggleThinkingIndicator(thinkingIndicator, true); // Show the thinking indicator
 
                 const response = await fetch(`${baseURL}/chatbot/`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        accessKey: accessKey,
                         text: userInput,
                         classSelection: classDropdown.value,
                         lesson: lessonDropdown.value,
@@ -211,7 +242,16 @@
 
                 toggleThinkingIndicator(thinkingIndicator, false); // Hide the thinking indicator
 
-                if (!response.ok) throw new Error(`Failed to send message: ${response.statusText}`);
+                if (!response.ok) {
+
+                    const errorData = await response.json();
+
+
+                    messageSubmissionStatusComponent.textContent = errorData.detail;
+                    messageSubmissionStatusComponent.style.display = "block";
+
+                    throw new Error(`Failed to send message: ${response.statusText}`);
+                }
                 const data = await response.json();
                 updateChat(responseOutput, userInput, data.text); // Update the chat area with the bot's response
 
@@ -254,6 +294,48 @@
         function formatLinks(text) {
             const urlPattern = /(https?:\/\/[^\s]+)/g;
             return text.replace(urlPattern, '<a href="$1" target="_blank">$1</a>'); // Replace URLs with clickable links
+        }
+
+        async function clearConversation() {
+            try {
+
+                const messageSubmissionStatusComponent = document.getElementById("messageSubmissionStatus");
+
+                messageSubmissionStatusComponent.style.display = "none";
+
+
+                toggleThinkingIndicator(thinkingIndicator, true);
+
+                const response = await fetch(`${baseURL}/conversation/clear`, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include'
+                });
+
+                toggleThinkingIndicator(thinkingIndicator, false);
+
+                if (!response.ok) {
+
+                    const errorData = await response.json();
+
+
+                    messageSubmissionStatusComponent.textContent = errorData.detail;
+                    messageSubmissionStatusComponent.style.display = "block";
+
+                    throw new Error(`Failed to send message: ${response.statusText}`);
+                }
+
+                const responseOutput = document.getElementById('responseOutput');
+
+                responseOutput.innerHTML = "";
+                responseOutput.scrollTop = responseOutput.scrollHeight;
+            }
+            catch (error) {
+                messageSubmissionStatusComponent.textContent = errorData.detail;
+                messageSubmissionStatusComponent.style.display = "block";
+
+                console.error('Error clearing conversation:', error); // Log any errors that occur
+            }
         }
 
         // Function to add event listeners for user interactions
@@ -392,6 +474,9 @@
                     console.error('Error sending email:', error); // Log any errors that occur
                 }
             });
+
+            document.getElementById("clearConversation").addEventListener('click',
+                clearConversation)
         }
 
         // Function to adjust the height of a textarea based on its content

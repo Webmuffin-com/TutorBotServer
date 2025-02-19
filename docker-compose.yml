@@ -1,0 +1,34 @@
+services:
+  app:
+    build: .
+    environment:
+      - CLOUD_MODE=${CLOUD_MODE:-true}
+      - S3_BUCKET_ENDPOINT=${S3_BUCKET_ENDPOINT}
+      - S3_BUCKET_ACCESS_KEY=${S3_BUCKET_ACCESS_KEY}
+      - S3_BUCKET_ACCESS_SECRET=${S3_BUCKET_ACCESS_SECRET}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - MAILGUN_ENABLED=${MAILGUN_ENABLED:-false}
+      - MAILGUN_API_KEY=${MAILGUN_API_KEY}
+      - MAILGUN_API_URL=${MAILGUN_API_URL}
+      - MAILGUN_FROM_ADDRESS=${MAILGUN_FROM_ADDRESS}
+      - MAX_TOKENS=${MAX_TOKENS:-10000}
+      - MAX_RETRIES=${MAX_RETRIES:-2}
+      - PYPPETEER_EXECUTABLE_PATH=${PYPPETEER_EXECUTABLE_PATH}
+      - PYPPETEER_CHROMIUM_REVISION=${PYPPETEER_CHROMIUM_REVISION}
+      - MODEL_PROVIDER=${MODEL_PROVIDER:-OPENAI}
+      - MODEL=${MODEL:-chatgpt-4o-latest}
+      - API_KEY=${API_KEY}
+      - PORT=${PORT}
+      - TIMEOUT=${TIMEOUT:-60}
+      - TEMPERATURE=${TEMPERATURE}
+      - TOP_P=${TOP_P}
+      - FREQUENCY_PENALTY=${FREQUENCY_PENALTY}
+      - PRESENCE_PENALTY=${PRESENCE_PENALTY}
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - "bash -c ':> /dev/tcp/127.0.0.1/${PORT}' || exit 1"
+      interval: 15s
+      timeout: 10s
+      retries: 3

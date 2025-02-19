@@ -17,8 +17,6 @@ The design is simple and can be easily modified for different use cases.
 
 ## Pre requisites
 
-In order to set the required secrets you need to duplicate the file `env.example.txt` and name it `env.txt` and fill its contents with the corresponding secrets.
-
 ### Create virtual environment
 
 #### MacOS / Linux
@@ -83,6 +81,10 @@ python -m pip install -r ./requirements-unix.txt
 python -m pip install -r ./requirements-windows.txt
 ```
 
+### Setup environment variables
+
+In order to set the required secrets you need to duplicate the file `.env.example` and name it `.env` and fill its contents with the corresponding values, the environmental variables example file has a brief description of each variable.
+
 ## Run the TutorBot_Server Development Server
 
 ### MacOS / Linux / Windows
@@ -97,7 +99,7 @@ In order to run the development server follow this steps:
 python ./TutorBot_Server.py
 ```
 
-- Test the application by opening the url: `http://localhost:8000`
+- Test the application by opening the url: `http://localhost:${PORT_FROM_ENV_VARS}`
 
 ## Build executable bundles
 
