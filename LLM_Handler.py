@@ -19,7 +19,7 @@ from constants import (
 from DefaultParameters import get_result_formatting
 from SessionCache import SessionCache
 from utils.types import PyMessage
-from utils.llm import convert_llm_output_to_html, get_llm_file
+from utils.llm import get_llm_file
 from utils.logging import setup_csv_logging
 
 
@@ -184,17 +184,10 @@ def invoke_llm(p_SessionCache: SessionCache, p_Request: PyMessage, p_sessionKey:
                     extra={"sessionKey": p_sessionKey},
                 )
 
-        EscapedXMLTags = convert_llm_output_to_html(BotResponse)
-
         logging.warning(
             f"LLM_RESPONSE:\n{BotResponse}).\n\nDETAILS ({llm_response})",
             extra={"sessionKey": p_sessionKey},
         )
-        logging.warning(
-            f"SENT TO CLIENT ({EscapedXMLTags})",
-            extra={"sessionKey": p_sessionKey},
-        )
-
         p_SessionCache.m_simpleCounterLLMConversation.add_message(
             "assistant", BotResponse, "LLM"
         )  # now we add the request.
@@ -205,7 +198,7 @@ def invoke_llm(p_SessionCache: SessionCache, p_Request: PyMessage, p_sessionKey:
             )
             p_SessionCache.m_simpleCounterLLMConversation.prune_oldest_pair()
 
-        return EscapedXMLTags
+        return BotResponse
 
     except Exception as e:
         # Handle general exceptions
