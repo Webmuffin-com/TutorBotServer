@@ -1,4 +1,5 @@
 import logging
+import markdown
 import nh3
 from copy import deepcopy
 
@@ -51,30 +52,6 @@ def get_llm_file(class_directory: str, type: str, file_name: str, session_key: s
     return content
 
 
-def convert_llm_output_to_html(llm_output):
-    logging.warning(
-        f"LLM OUTPUT =========================================\n{llm_output}"
-    )
-    attributes = deepcopy(nh3.ALLOWED_ATTRIBUTES)
-    attributes["div"] = set()
-
-    attributes["div"].add("class")
-
-    clean_html = nh3.clean(llm_output, attributes=attributes)
-
-    logging.warning(
-        f"CLEAN HTML SANITIZED BY NH3 =========================================\n{clean_html}"
-    )
-
-    final_html = clean_html
-
-    logging.warning(
-        f"FINAL OUTPUT =========================================\n{final_html}"
-    )
-
-    return final_html
-
-
 def format_conversation(conversation):
     user_message = """<div class="user-message"><h2 class="message-text">User: </h2><p>{user_input}</p></div>"""
     assistant_message = """<div class="bot-message"><h2 class="message-text">Bot:</h2>{assistant_response}</div>"""
@@ -88,8 +65,13 @@ def format_conversation(conversation):
         if role == "user":
             messages.append(user_message.format(user_input=content))
         elif role == "assistant":
-            EscapedXMLTags = convert_llm_output_to_html(content)
+            html = markdown.markdown(content)
 
-            messages.append(assistant_message.format(assistant_response=EscapedXMLTags))
+            attributes = deepcopy(nh3.ALLOWED_ATTRIBUTES)
+            attributes["div"] = set()
+            attributes["div"].add("class")
+
+            clean_html = nh3.clean(html, attributes=attributes)
+            messages.append(assistant_message.format(assistant_response=clean_html))
 
     return messages
