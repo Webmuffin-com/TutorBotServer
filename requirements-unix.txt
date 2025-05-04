@@ -127,4 +127,4 @@ watchfiles==1.0.4
 webencodings==0.5.1
 websockets==10.4
 zipp==3.21.0
-zopfli==0.2.3.post1
+zopfli==0.2.3.post1 
