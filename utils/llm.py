@@ -29,7 +29,10 @@ def validate_access_key(access_key: str, session_key: str):
 
 def get_llm_file(class_directory: str, type: str, file_name: str, session_key: str):
 
-    content = open_text_file(f"classes/{class_directory}/{type}/{file_name}")
+    if (type):
+        content = open_text_file(f"classes/{class_directory}/{type}/{file_name}")
+    else:
+        content = open_text_file(f"classes/{class_directory}/{file_name}")
 
     if content is None:
         logging.warning(

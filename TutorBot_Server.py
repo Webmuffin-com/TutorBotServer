@@ -48,6 +48,7 @@ from utils.filesystem import (  # noqa: E402
 )
 from SessionCache import SessionCacheManager, session_manager  # noqa: E402
 from LLM_Handler import invoke_llm  # noqa: E402
+from LLM_Handler import invoke_llm_2
 
 
 def get_session_manager():
@@ -195,7 +196,7 @@ def generate_response(p_session_key, p_Request):
         if not p_Request.actionPlan:
             logging.warning(f"Session ({p_session_key}) did not specify Action Plan")
             return "You must select an action plan to use this Bot"
-        return invoke_llm(sessionCache, p_Request, p_session_key)
+        return invoke_llm_2(sessionCache, p_Request, p_session_key)
     else:
         response = "Received unknown session key"
         logging.error(

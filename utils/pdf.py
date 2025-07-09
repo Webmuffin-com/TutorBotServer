@@ -23,7 +23,7 @@ async def generate_conversation_pdf(
         raise HTTPException(status_code=404, detail="Could not locate Session Key")
 
     conversation = (
-        session_cache.m_simpleCounterLLMConversation.get_all_previous_messages()
+        session_cache.m_simpleCounterLLMConversation.get_user_conversation_messages()
     )
 
     formatted_conversation = format_conversation(conversation)
