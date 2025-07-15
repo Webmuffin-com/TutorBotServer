@@ -7,6 +7,7 @@ from constants import (
     model,
     api_key,
     max_tokens,
+    max_conversation_tokens,
     temperature,
     top_p,
     frequency_penalty,
@@ -196,7 +197,7 @@ def invoke_llm(p_SessionCache: SessionCache, p_Request: PyMessage, p_sessionKey:
         # Hacked because conversation limits are drawfed by other prompt components.
         # This code only consider what the user request/response is ignore SSR activity.
         user_conversation_size = p_SessionCache.m_simpleCounterLLMConversation.get_total_conv_content_bytes()
-        if user_conversation_size > max_tokens * 4: #rough that 1 token is 4 bytes.
+        if user_conversation_size > max_conversation_tokens * 4: #rough that 1 token is 4 bytes.
             logging.warning(
                 f"Token usage ({user_conversation_size}) exceeded Max conversation in bytes ({max_tokens*4}).  Removing oldest part of user,attendant conversation"
             )
@@ -305,15 +306,14 @@ def invoke_llm_2(p_SessionCache, p_Request, p_sessionKey):
         pass_count          = 0
 
         while True:
+
             messages    = build_prompt(p_Request.text, additional_content, SSRs_loaded)
 
             if (not pass_count):
-                logging.warning(f"LLM_REQUEST:\n({messages})", extra={"sessionKey": p_sessionKey})
+                logging.warning(f"USER_REQUEST:\n({messages})", extra={"sessionKey": p_sessionKey})
             else:
-                logging.warning(f"LLM_SSR_REQUEST:\n({messages})", extra={"sessionKey": p_sessionKey})
+                logging.warning(f"SSR_RESPONSE:\n({messages})", extra={"sessionKey": p_sessionKey})
 
-            if (pass_count > 4):
-                return "SSR Loop exceeded 4 loops.  Aborting Operation"
             pass_count += 1
 
             LLMResponse = llm.invoke(messages)
@@ -336,6 +336,15 @@ def invoke_llm_2(p_SessionCache, p_Request, p_sessionKey):
                 LLMMessage =  f"Total Input Tokens ({total_request_token_count}), Total Output Tokens ({total_response_token_count}) over ({pass_count}) passes\n"
                 LLMMessage += ssr_response.find("answer").text
                 break
+            # if more content is being requested and exceeded 4 loops, use what you have.
+            if (pass_count > 4):
+                logging.warning(f"SSR Loop exceeded 4 loops.  Going with what we have", extra={"sessionKey": p_sessionKey})
+
+                LLMMessage = f"Total Input Tokens ({total_request_token_count}), Total Output Tokens ({total_response_token_count}) over ({pass_count}) passes\n"
+                LLMMessage += "SSR exceeded loop count.  Answer may not have considered all information\n"
+                LLMMessage += ssr_response.find("answer").text
+                break
+
 
             # We are adding in a new user request acknowledging file content added and its response
             p_SessionCache.m_simpleCounterLLMConversation.add_message("user"     , p_Request.text, None)
@@ -344,7 +353,7 @@ def invoke_llm_2(p_SessionCache, p_Request, p_sessionKey):
             primary_keys = [key.strip() for key in primary_keys_element.PrimaryKeys.text.split(",")]
             content_loaded, SSRs_loaded = load_ssr_files(p_Request, p_sessionKey, primary_keys)
 
-            logging.warning(f"SSR_CONTENT_LOADED ({SSRs_loaded}) and reissued request", extra={"sessionKey": p_sessionKey})
+            logging.warning(f"SSR_RESPONSE ({SSRs_loaded}) and reissued request", extra={"sessionKey": p_sessionKey})
 
             additional_content += content_loaded
 
@@ -354,17 +363,21 @@ def invoke_llm_2(p_SessionCache, p_Request, p_sessionKey):
         p_SessionCache.m_simpleCounterLLMConversation.add_message("user"     , p_Request.text     , p_Request.text)
         p_SessionCache.m_simpleCounterLLMConversation.add_message("assistant", LLMResponse.content, LLMMessage)
 
-        logging.warning(f"LLM_RESPONSE({request_token_count}, {response_token_count}):\n{LLMResponse}", extra={"sessionKey": p_sessionKey})
-
-        # Hacked because conversation limits are drawfed by other prompt components.
+        bConversationGettingDropped = False
+        # Hacked because conversation limits are dwarfed by other prompt components.
         # This code only consider what the user request/response is ignore SSR activity.
         user_conversation_size = p_SessionCache.m_simpleCounterLLMConversation.get_total_conv_content_bytes()
-        if user_conversation_size > max_tokens * 4: #rough that 1 token is 4 bytes.
+        if user_conversation_size > max_conversation_tokens * 4: # rough estimate that 1 token is 4 bytes.
+            bConversationGettingDropped = True
             logging.warning(
-                f"Token usage ({user_conversation_size}) exceeded Max conversation in bytes ({max_tokens*4}).  Removing oldest part of user,attendant conversation"
+                f"Conversation exceeded Max conversation size ({user_conversation_size}).  Removing oldest part of user conversation"
             )
             p_SessionCache.m_simpleCounterLLMConversation.prune_oldest_pair()
 
+        if (bConversationGettingDropped):
+            LLMMessage = f"Old Conversations getting dropped.  Consider starting a new Conversation\n" + LLMMessage
+
+        logging.warning(f"USER_RESPONSE({request_token_count}, {response_token_count}):\n{LLMResponse}", extra={"sessionKey": p_sessionKey})
 
         return LLMMessage
 

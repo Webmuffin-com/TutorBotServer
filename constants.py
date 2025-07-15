@@ -107,6 +107,8 @@ if not api_key and model_provider != "GOOGLE":
 
 max_tokens = int(os.getenv("MAX_TOKENS") or 10000)
 
+max_conversation_tokens = int(os.getenv("MAX_CONVERSATION_TOKENS") or 20000)
+
 max_retries = int(os.getenv("MAX_RETRIES") or "2")
 
 timeout = int(os.getenv("TIMEOUT") or "60")
