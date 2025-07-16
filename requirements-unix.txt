@@ -7,13 +7,11 @@ APScheduler==3.11.0
 beautifulsoup4==4.12.3
 boto3==1.36.5
 botocore==1.36.5
-Brotli==1.1.0
 cachetools==5.5.0
 certifi==2024.8.30
 cffi==1.17.1
 charset-normalizer==3.4.0
 click==8.1.7
-cssselect2==0.7.0
 defusedxml==0.7.1
 distro==1.9.0
 dnspython==2.7.0
@@ -22,7 +20,6 @@ email_validator==2.2.0
 fastapi==0.115.6
 fastapi-cli==0.0.7
 filelock==3.16.1
-fonttools==4.55.3
 fsspec==2024.10.0
 google-api-core==2.24.0
 google-auth==2.37.0
@@ -62,10 +59,9 @@ langchain-ollama==0.2.1
 langchain-openai==0.2.12
 langsmith==0.2.3
 lomond==0.3.3
+lxml==6.0.0
 macholib==1.16.3
 Markdown==3.8
-markdown-it-py==3.0.0
-markdown2==2.5.1
 MarkupSafe==3.0.2
 mdurl==0.1.2
 nh3==0.2.19
@@ -75,7 +71,6 @@ openai==1.57.3
 orjson==3.10.12
 packaging==24.2
 pandas==2.1.4
-pillow==11.0.0
 proto-plus==1.25.0
 protobuf==5.29.1
 pyasn1==0.6.1
@@ -83,13 +78,9 @@ pyasn1_modules==0.4.1
 pycparser==2.22
 pydantic==2.9.2
 pydantic_core==2.23.4
-pydyf==0.11.0
-pyee==11.1.1
 Pygments==2.19.1
 pyinstaller==6.11.1
 pyinstaller-hooks-contrib==2024.10
-pyphen==0.17.0
-pyppeteer==2.0.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 python-multipart==0.0.20
@@ -112,8 +103,6 @@ starlette==0.41.3
 tabulate==0.9.0
 tenacity==9.0.0
 tiktoken==0.8.0
-tinycss2==1.4.0
-tinyhtml5==2.0.0
 tokenizers==0.20.1
 tqdm==4.67.1
 typer==0.15.1
@@ -124,7 +113,5 @@ urllib3==1.26.20
 uvicorn==0.32.1
 uvloop==0.21.0
 watchfiles==1.0.4
-webencodings==0.5.1
 websockets==10.4
 zipp==3.21.0
-zopfli==0.2.3.post1 

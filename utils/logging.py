@@ -7,7 +7,7 @@ from SessionCache import SimpleCounterLLMConversation
 from constants import cloud_mode_enabled
 from utils.filesystem import open_text_file, save_file
 
-csv_headers = "Date,File Name,Func Name,Trace Level,Thread ID,Time,Message,Session Key,Access Key\n"
+csv_headers = "Date,File Name,Func Name,Trace Level,Thread ID,Server Time,User Time,Message,Session Key,Access Key\n"
 
 
 def generate_cloud_log_filename(prefix="TutorBot-Log", extension="csv"):
@@ -45,15 +45,16 @@ class CSVLogFormatter(logging.Formatter):
         print("--------------")"""
         # Format time to separate date and time components
         formatted_date = datetime.fromtimestamp(record.created).strftime("%Y-%m-%d")
-        formatted_time = datetime.fromtimestamp(record.created).strftime("%H-%M-%S.%f")[
+        server_time = datetime.fromtimestamp(record.created).strftime("%H-%M-%S.%f")[
             :12
         ]  # Slices the string to keep only milliseconds
         message = record.getMessage().replace('"', '""')  # Escape quotes in the message
-        # Use getattr to safely access sessionKey
+        # Use getattr to safely access sessionKey and other custom fields
         session_key = getattr(record, "sessionKey", "None")
         access_key = getattr(record, "accessKey", "None")
+        user_time = getattr(record, "userTime", "None")
 
-        formatted_record = f'"{formatted_date}","{record.filename}","{record.funcName}","{record.levelname}","{record.thread}","{formatted_time}","{message}", "{session_key}", "{access_key}"'
+        formatted_record = f'"{formatted_date}","{record.filename}","{record.funcName}","{record.levelname}","{record.thread}","{server_time}","{user_time}","{message}", "{session_key}", "{access_key}"'
         return formatted_record
 
 

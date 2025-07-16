@@ -76,7 +76,6 @@ pyee==11.1.1
 pyinstaller==6.11.1
 pyinstaller-hooks-contrib==2024.10
 pyphen==0.17.0
-pyppeteer==2.0.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 pytz==2024.2

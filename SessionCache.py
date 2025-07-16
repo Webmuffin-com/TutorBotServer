@@ -52,19 +52,19 @@ class SimpleCounterLLMConversation:
         self.conversation = []
         self.message_id_counter = 1  # Initialize message ID counter
 
-    def add_message(self, role, content, participant_id=None):
+    def add_message(self, role, content, conv_content):
         """
         Adds a message to the conversation with a timestamp and a simple incremental ID.
         :param role: The role of the message sender ('user' or 'assistant').
         :param content: The content of the message.
-        :param participant_id: An optional identifier for the participant.
+        :param conv_content: if not null, then add to download for user facing conversation
         """
         message = {
             "id": self.message_id_counter,
             "timestamp": datetime.now().isoformat(),
             "role": role,
             "content": content,
-            "participant_id": participant_id or "default",
+            "conv_content": conv_content,
         }
         self.conversation.append(message)
         self.message_id_counter += 1  # Increment the counter for the next message
@@ -129,6 +129,31 @@ class SimpleCounterLLMConversation:
         """
         return [(message["role"], message["content"]) for message in self.conversation]
 
+    def get_user_conversation_messages(self):
+        """
+        Retrieves all messages from the conversation where conv_content is not None.
+        Returns:
+            A list of tuples, each containing the role and conv_content of each message.
+        """
+        return [
+            (message["role"], message["conv_content"])
+            for message in self.conversation
+            if message.get("conv_content") is not None
+        ]
+
+    def get_total_conv_content_bytes(self):
+        """
+        Calculates the total byte size of all conv_content fields in the conversation
+        where conv_content is not None.
+
+        Returns:
+            The total number of bytes used by conv_content strings.
+        """
+        return sum(
+            len(message["conv_content"].encode("utf-8"))
+            for message in self.conversation
+            if message.get("conv_content") is not None
+        )
     def __iter__(self):
         """
         Returns an iterator over a snapshot of the conversation list.

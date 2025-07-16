@@ -4,13 +4,16 @@
 <head>
   <meta charset="UTF-8">
   <title>Teaching Chatbot</title>
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/app.css">
+  <link rel="stylesheet" href="/static/conversation.css">
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
 </head>
 
 <body>
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.5/dist/purify.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="/static/timestamp-utils.js"></script>
+  <script src="/static/markdown-utils.js"></script>
 
   <div class="container">
     <div class="header"> <!-- Header section with title and instructions -->
@@ -45,18 +48,14 @@
     </div>
     <!-- Chat area for interaction -->
     <div class="chat-area">
-      <label for="responseOutput">
-        Response:
-      </label>
-      <div id="responseOutput" class="response-output"></div>
-      <label for="userInput">
-        Request:
-      </label>
-      <div class="input-container">
-        <!-- Loading indicator -->
-        <div id="thinkingIndicator" class="loader" style="display: none;"></div>
-        <textarea id="userInput" class="user-input"></textarea>
-        <button id="sendButton">Send</button>
+      <div id="responseOutput" class="conversation"></div>
+      <div class="input-section">
+        <div class="input-container">
+          <!-- Loading indicator -->
+          <div id="thinkingIndicator" class="loader" style="display: none;"></div>
+          <textarea id="userInput" class="user-input"></textarea>
+          <button id="sendButton">Send</button>
+        </div>
       </div>
     </div>
 
@@ -197,93 +196,331 @@
     // Function to send a message to the chatbot
     async function sendMessage() {
       try {
-
         const messageSubmissionStatusComponent = document.getElementById("messageSubmissionStatus");
-
         messageSubmissionStatusComponent.style.display = "none";
 
-
         const accessKey = document.getElementById('accessKey').value;
-
         const userInputElement = document.getElementById('userInput');
-        const userInput = userInputElement.value;
+        const userInput = userInputElement.value.trim();
 
         if (!userInput) {
           const errorMessage = "Please enter a request.";
-
           messageSubmissionStatusComponent.textContent = errorMessage;
           messageSubmissionStatusComponent.style.display = "block";
-
-          throw new Error(`Failed to send message: ${errorMessage}`);
-
           return;
         }
 
         const responseOutput = document.getElementById('responseOutput');
-        const thinkingIndicator = document.getElementById('thinkingIndicator');
-
+        const sendButton = document.getElementById('sendButton');
         const classDropdown = document.getElementById('classDropdown');
         const lessonDropdown = document.getElementById('lessonDropdown');
         const actionPlanDropdown = document.getElementById('actionPlanDropdown');
 
+        // Disable send button with spinner and clear input immediately
+        sendButton.disabled = true;
+        sendButton.innerHTML = '<div class="button-spinner"></div>';
+        userInputElement.value = '';
+        adjustTextAreaHeight(userInputElement);
 
+        // Add user message to conversation immediately
+        const messageTime = new Date();
+        const userTimestamp = TimestampUtils.createChatTimestamp(messageTime, 'user');
+        const userMessage = `<div class="message user">
+          <div class="message-content">
+            <div class="message-header">You</div>
+            <p class="message-text">${formatLinks(userInput)}</p>
+            ${userTimestamp}
+          </div>
+        </div>`;
 
-        toggleThinkingIndicator(thinkingIndicator, true); // Show the thinking indicator
+        // Add chatbot placeholder with loading animation
+        const placeholderId = `placeholder-${Date.now()}`;
+        const botTimestamp = TimestampUtils.createChatTimestamp(messageTime, 'bot');
+        const placeholderMessage = `<div class="message bot" id="${placeholderId}">
+          <div class="message-content">
+            <div class="message-header">TutorBot</div>
+            <div class="message-text loading-placeholder">
+              Thinking<div class="loading-dots"><span></span><span></span><span></span></div>
+            </div>
+            ${botTimestamp}
+          </div>
+        </div>`;
 
-        const response = await fetch(`${baseURL}/chatbot/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            accessKey: accessKey,
-            text: userInput,
-            classSelection: classDropdown.value,
-            lesson: lessonDropdown.value,
-            actionPlan: actionPlanDropdown.value
-          }), // Send the user input as a JSON payload
-          credentials: 'include'
-        });
+        // Add both messages to the conversation
+        responseOutput.innerHTML += userMessage + placeholderMessage;
+        scrollToMessage(placeholderId);
 
-        toggleThinkingIndicator(thinkingIndicator, false); // Hide the thinking indicator
+        try {
+          // Send request to server
+          const response = await fetch(`${baseURL}/chatbot/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              accessKey: accessKey,
+              text: userInput,
+              classSelection: classDropdown.value,
+              lesson: lessonDropdown.value,
+              actionPlan: actionPlanDropdown.value,
+              userTimestamp: new Date().toISOString()
+            }),
+            credentials: 'include'
+          });
 
-        if (!response.ok) {
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || response.statusText);
+          }
 
-          const errorData = await response.json();
+          const data = await response.json();
+          
+          // Replace placeholder with actual response
+          replacePlaceholderWithResponse(placeholderId, data.text, messageTime);
 
+        } catch (error) {
+          console.error('Error sending message:', error);
+          
+          // Replace placeholder with error message
+          const errorMessage = `<div class="message-text" style="color: #dc3545; font-style: italic;">
+            Error: ${error.message || 'Failed to get response'}
+          </div>`;
+          const placeholderElement = document.getElementById(placeholderId);
+          if (placeholderElement) {
+            const messageContent = placeholderElement.querySelector('.message-content');
+            const headerElement = messageContent.querySelector('.message-header');
+            const timestampElement = messageContent.querySelector('.message-timestamp');
+            messageContent.innerHTML = '';
+            messageContent.appendChild(headerElement);
+            messageContent.insertAdjacentHTML('beforeend', errorMessage);
+            messageContent.appendChild(timestampElement);
+          }
 
-          messageSubmissionStatusComponent.textContent = errorData.detail;
+          messageSubmissionStatusComponent.textContent = error.message || 'Failed to send message';
           messageSubmissionStatusComponent.style.display = "block";
-
-          throw new Error(`Failed to send message: ${response.statusText}`);
+        } finally {
+          // Re-enable send button
+          sendButton.disabled = false;
+          sendButton.innerHTML = 'Send';
         }
-        const data = await response.json();
-        updateChat(responseOutput, userInput, data.text); // Update the chat area with the bot's response
 
-        userInputElement.value = ''; // Clear the user input
-        adjustTextAreaHeight(userInputElement); // Adjust the height of the textarea
-        userInputElement.scrollIntoView({ behavior: 'smooth' }); // Scroll the input into view
       } catch (error) {
-        console.error('Error sending message:', error); // Log any errors that occur
+        console.error('Error in sendMessage:', error);
+        // Re-enable send button in case of error
+        const sendButton = document.getElementById('sendButton');
+        sendButton.disabled = false;
+        sendButton.innerHTML = 'Send';
       }
     }
 
-    // Function to show or hide the thinking indicator
+    // Function to replace placeholder with actual chatbot response
+    function replacePlaceholderWithResponse(placeholderId, botResponse, messageTime) {
+      const placeholderElement = document.getElementById(placeholderId);
+      if (!placeholderElement) return;
+
+      // Generate unique ID for this message
+      const messageId = Date.now() + Math.random();
+      
+      // Parse bot response to separate token info from actual answer
+      const { tokenInfo, cleanAnswer } = parseBotResponse(botResponse);
+      
+      // Format the clean answer as markdown
+      const formattedResponse = formatMarkdown(cleanAnswer);
+      
+      // Create the bot timestamp
+      const botTimestamp = TimestampUtils.createChatTimestamp(messageTime, 'bot');
+      
+      // Build the complete bot message content
+      let messageContent = `<div class="message-header">
+        TutorBot
+        <button class="copy-button" onclick="copyRawMarkdown('raw-${messageId}')" title="Copy raw markdown">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M4 2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H4zm0 1h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/>
+            <path d="M2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1H2z"/>
+          </svg>
+          Copy MD
+        </button>
+      </div>`;
+      
+      if (tokenInfo) {
+        messageContent += `<div class="token-info">${tokenInfo}</div>`;
+      }
+      
+      messageContent += `<div class="message-text rendered-markdown">${formattedResponse}</div>
+        <textarea id="raw-${messageId}" class="raw-markdown-content" readonly style="display: none;">${cleanAnswer}</textarea>
+        ${botTimestamp}`;
+
+      // Replace the placeholder content
+      const messageContentElement = placeholderElement.querySelector('.message-content');
+      messageContentElement.innerHTML = messageContent;
+      
+      // Remove the placeholder ID
+      placeholderElement.removeAttribute('id');
+      
+      // Scroll to the message
+      scrollToMessage(placeholderElement);
+    }
+
+    // Function to scroll to a specific message
+    function scrollToMessage(elementOrId) {
+      const element = typeof elementOrId === 'string' ? document.getElementById(elementOrId) : elementOrId;
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
+    // Function to show or hide the thinking indicator (legacy)
     function toggleThinkingIndicator(indicator, show) {
       indicator.style.display = show ? 'block' : 'none';
     }
 
-    // Function to update the chat area with user and bot messages
-    function updateChat(outputElement, userInput, botResponse) {
-      const formattedUserInput = formatLinks(userInput); // Format links in the user input
-      const formattedResponse = formatMarkdown(botResponse); // Format links in the bot response
-      const timestamp = new Date().toLocaleTimeString(); // Get the current time
-
-
-
-      const userMessage = `<div class="user-message"><p class="message-text blue-bold">User: </p><p>${formattedUserInput}</p><span class="timestamp">${timestamp}</span></div>`;
-      const botMessage = `<div class="bot-message"><p class="message-text purple-bold">Bot:</p>${formattedResponse}<span class="timestamp">${timestamp}</span></div>`;
-      outputElement.innerHTML += userMessage + botMessage; // Append the messages to the chat area
-      outputElement.scrollTop = outputElement.scrollHeight; // Scroll to the bottom of the chat area
+    // Function to parse bot response and separate token info from actual answer
+    function parseBotResponse(content) {
+      const tokenPattern = /^Total Input Tokens \((\d+)\), Total Output Tokens \((\d+)\) over \((\d+)\) passes?\s*\n/;
+      const match = content.match(tokenPattern);
+      
+      let tokenInfo = null;
+      let answer = content;
+      
+      if (match) {
+        const inputTokens = match[1];
+        const outputTokens = match[2];
+        const iterations = match[3];
+        tokenInfo = `Input: ${inputTokens} | Output: ${outputTokens} | Iterations: ${iterations}`;
+        
+        // Get the remaining content after token info
+        answer = content.substring(match[0].length);
+        
+        // Check for SSR status messages and skip them
+        const ssrMessages = [
+          'SSR exceeded loop count.  Answer may not have considered all information\n',
+          'Old Conversations getting dropped.  Consider starting a new Conversation\n'
+        ];
+        
+        for (const ssrMsg of ssrMessages) {
+          if (answer.startsWith(ssrMsg)) {
+            answer = answer.substring(ssrMsg.length);
+          }
+        }
+      }
+      
+      // Remove any leading/trailing whitespace
+      answer = answer.trim();
+      
+      // Clean up indentation (same logic as HTML export)
+      // Handle case where first line has no indentation but subsequent lines do
+      const lines = answer.split('\n');
+      if (lines.length > 1) {
+        // Find the most common indentation among non-empty lines (excluding the first line)
+        const indentations = [];
+        for (let i = 1; i < lines.length; i++) {  // Skip first line
+          const line = lines[i];
+          if (line.trim()) {  // Only non-empty lines
+            const indent = line.length - line.trimStart().length;
+            if (indent > 0) {
+              indentations.push(indent);
+            }
+          }
+        }
+        
+        // If we found indented lines, remove the most common indentation
+        if (indentations.length > 0) {
+          // Find most common indentation
+          const indentCounts = {};
+          indentations.forEach(indent => {
+            indentCounts[indent] = (indentCounts[indent] || 0) + 1;
+          });
+          
+          let mostCommonIndent = 0;
+          let maxCount = 0;
+          for (const [indent, count] of Object.entries(indentCounts)) {
+            if (count > maxCount) {
+              maxCount = count;
+              mostCommonIndent = parseInt(indent);
+            }
+          }
+          
+          // Only remove if it's substantial (4+ spaces)
+          if (mostCommonIndent >= 4) {
+            const cleanedLines = [lines[0]];  // Keep first line as-is
+            for (let i = 1; i < lines.length; i++) {
+              const line = lines[i];
+              if (line.trim() && line.length >= mostCommonIndent && line.substring(0, mostCommonIndent).trim() === '') {
+                cleanedLines.push(line.substring(mostCommonIndent));
+              } else if (line.trim()) {
+                cleanedLines.push(line.trimStart());
+              } else {
+                cleanedLines.push('');
+              }
+            }
+            answer = cleanedLines.join('\n');
+          }
+        }
+      }
+      
+      return { tokenInfo, cleanAnswer: answer };
     }
+
+    // Function to copy raw markdown from bot messages (matching export functionality)
+    async function copyRawMarkdown(textareaId) {
+      const textarea = document.getElementById(textareaId);
+      if (!textarea) return;
+      
+      const markdownText = textarea.value;
+      const button = event.target.closest('.copy-button');
+      
+      // Try modern clipboard API first
+      let copySuccess = false;
+      if (navigator.clipboard && window.isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(markdownText);
+          copySuccess = true;
+        } catch (err) {
+          console.warn('Clipboard API failed, trying fallback');
+        }
+      }
+      
+      // Fallback to older method
+      if (!copySuccess) {
+        try {
+          // Make textarea temporarily visible for selection
+          textarea.style.position = 'fixed';
+          textarea.style.left = '0';
+          textarea.style.top = '0';
+          textarea.style.opacity = '1';
+          textarea.style.zIndex = '9999';
+          
+          textarea.select();
+          textarea.setSelectionRange(0, 99999);
+          copySuccess = document.execCommand('copy');
+          
+          // Hide textarea again
+          textarea.style.position = 'absolute';
+          textarea.style.left = '-9999px';
+          textarea.style.opacity = '0';
+          textarea.style.zIndex = '-1';
+        } catch (err) {
+          console.error('Failed to copy text: ', err);
+        }
+      }
+      
+      // Visual feedback
+      if (button) {
+        const originalHtml = button.innerHTML;
+        if (copySuccess) {
+          button.innerHTML = '<span style="color: #28a745; font-size: 12px;">✓ Copied!</span>';
+        } else {
+          button.innerHTML = '<span style="color: #dc3545; font-size: 12px;">✗ Failed</span>';
+          // Show user a way to manually copy
+          setTimeout(() => {
+            alert('Copy failed. The markdown text is: \\n\\n' + markdownText);
+          }, 100);
+        }
+        
+        setTimeout(() => {
+          button.innerHTML = originalHtml;
+        }, 2000);
+      }
+    }
+
 
     function copyToClipboard() {
       const responseOutput = document.getElementById('responseOutput').innerText;
@@ -303,9 +540,7 @@
 
     // Function to format the markdown content into HTML
     function formatMarkdown(markdown) {
-      const html = marked.parse(markdown); // Use the marked library to parse markdown into HTML
-      const cleanedHtml = DOMPurify.sanitize(html); // Sanitize the HTML to prevent XSS attacks
-      return cleanedHtml; // Return the sanitized HTML
+      return MarkdownUtils.renderMarkdown(markdown);
     }
 
     async function clearConversation() {
