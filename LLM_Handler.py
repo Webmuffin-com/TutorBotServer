@@ -488,6 +488,11 @@ def invoke_llm_with_ssr(p_SessionCache, p_Request, p_sessionKey):
                 ssr_state.loaded_content_message,
             )
 
+            logging.warning(
+                f"LLM REQUEST ({ssr_state.iteration_count})",
+                extra={"sessionKey": p_sessionKey},
+            )
+
             if ssr_state.iteration_count == 1:
                 logging.warning("USER_REQUEST", extra={"sessionKey": p_sessionKey})
             else:
