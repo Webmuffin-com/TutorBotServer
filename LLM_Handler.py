@@ -59,6 +59,11 @@ def extract_ssr_content_request(
     soup = BeautifulSoup(llm_response_content, "lxml-xml")
     ssr_response = soup.find(SSR_XML_RESPONSE_TAG)
 
+    logging.warning(
+        f"SSR Response: {ssr_response}",
+        extra={"sessionKey": "unknown"},  # Replace with actual session key if available
+    )
+
     if not isinstance(ssr_response, Tag):
         return False, [], ""
 
@@ -535,8 +540,8 @@ def invoke_llm_with_ssr(p_SessionCache, p_Request, p_sessionKey):
                     ssr_state.total_output_tokens,
                     ssr_state.iteration_count,
                 )
-                LLMMessage += "SSR exceeded loop count.  Answer may not have considered all information\n"
-                LLMMessage += answer_text
+                LLMMessage += answer_text + "\n"
+                LLMMessage += "**SSR exceeded loop count.  Answer may not have considered all information**"
                 break
 
             # We are adding in a new user request acknowledging file content added and its response
