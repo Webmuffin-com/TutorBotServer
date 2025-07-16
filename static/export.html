@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TutorBot Conversation - {{timestamp}}</title>
+    <style>
+        /* CSS content will be injected here during template rendering */
+        {{css_content}}
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.5/dist/purify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        async function copyRawMarkdown(textareaId) {
+            const textarea = document.getElementById(textareaId);
+            if (!textarea) return;
+            
+            const markdownText = textarea.value;
+            const button = event.target.closest('.copy-button');
+            
+            // Try modern clipboard API first
+            let copySuccess = false;
+            if (navigator.clipboard && window.isSecureContext) {
+                try {
+                    await navigator.clipboard.writeText(markdownText);
+                    copySuccess = true;
+                } catch (err) {
+                    console.warn('Clipboard API failed, trying fallback');
+                }
+            }
+            
+            // Fallback to older method
+            if (!copySuccess) {
+                try {
+                    // Make textarea temporarily visible for selection
+                    textarea.style.position = 'fixed';
+                    textarea.style.left = '0';
+                    textarea.style.top = '0';
+                    textarea.style.opacity = '1';
+                    textarea.style.zIndex = '9999';
+                    
+                    textarea.select();
+                    textarea.setSelectionRange(0, 99999);
+                    copySuccess = document.execCommand('copy');
+                    
+                    // Hide textarea again
+                    textarea.style.position = 'absolute';
+                    textarea.style.left = '-9999px';
+                    textarea.style.opacity = '0';
+                    textarea.style.zIndex = '-1';
+                } catch (err) {
+                    console.error('Failed to copy text: ', err);
+                }
+            }
+            
+            // Visual feedback
+            if (button) {
+                const originalHtml = button.innerHTML;
+                if (copySuccess) {
+                    button.innerHTML = '<span style="color: #28a745; font-size: 12px;">✓ Copied!</span>';
+                } else {
+                    button.innerHTML = '<span style="color: #dc3545; font-size: 12px;">✗ Failed</span>';
+                    // Show user a way to manually copy
+                    setTimeout(() => {
+                        alert('Copy failed. The markdown text is: \\n\\n' + markdownText);
+                    }, 100);
+                }
+                
+                setTimeout(() => {
+                    button.innerHTML = originalHtml;
+                }, 2000);
+            }
+        }
+
+        // Markdown rendering utility
+        class MarkdownUtils {
+            static renderMarkdown(markdown) {
+                if (typeof marked === 'undefined') {
+                    console.warn('Marked library not available, falling back to basic HTML escaping');
+                    return MarkdownUtils.escapeHtml(markdown).replace(/\n/g, '<br>');
+                }
+                
+                try {
+                    const html = marked.parse(markdown);
+                    return DOMPurify ? DOMPurify.sanitize(html) : html;
+                } catch (error) {
+                    console.error('Error rendering markdown:', error);
+                    return MarkdownUtils.escapeHtml(markdown).replace(/\n/g, '<br>');
+                }
+            }
+
+            static escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            static decodeHtmlEntities(text) {
+                const textarea = document.createElement('textarea');
+                textarea.innerHTML = text;
+                return textarea.value;
+            }
+
+            static renderAllMarkdown(selector = '.rendered-markdown[data-markdown]') {
+                const elements = document.querySelectorAll(selector);
+                elements.forEach(element => {
+                    const markdown = element.getAttribute('data-markdown');
+                    if (markdown) {
+                        const decodedMarkdown = MarkdownUtils.decodeHtmlEntities(markdown);
+                        element.innerHTML = MarkdownUtils.renderMarkdown(decodedMarkdown);
+                    }
+                });
+            }
+        }
+
+        // Initialize markdown rendering when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            MarkdownUtils.renderAllMarkdown();
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>TutorBot Learning Center</h1>
+            <p>Conversation Export</p>
+        </div>
+        
+        <div class="metadata">
+            <strong>Class:</strong> {{class_name}} | 
+            <strong>Lesson:</strong> {{lesson}} | 
+            <strong>Mode:</strong> {{action_plan}} | 
+            <strong>Exported:</strong> {{timestamp}}
+        </div>
+        
+        <div class="conversation">
+            {{conversation_html}}
+        </div>
+    </div>
+</body>
+</html>

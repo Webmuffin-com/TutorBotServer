@@ -1,6 +1,4 @@
-from datetime import datetime
 import re
-import subprocess
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Response, HTTPException, Depends
 from fastapi.responses import (
@@ -29,17 +27,17 @@ from utils.logging import (  # noqa: E402
 from constants import (  # noqa: E402
     cloud_mode_enabled,
     mailgun_enabled,
-    pyppeteer_executable_path,
     port,
     model,
     top_p,
     temperature,
     frequency_penalty,
     presence_penalty,
+    validate_ssr_configuration,
 )
 
 
-from utils.pdf import generate_conversation_pdf  # noqa: E402
+from utils.html_export import HTMLConversationExporter  # noqa: E402
 from utils.email import send_email  # noqa: E402
 from utils.llm import validate_access_key  # noqa: E402
 from utils.filesystem import (  # noqa: E402
@@ -47,8 +45,7 @@ from utils.filesystem import (  # noqa: E402
     list_directory,
 )
 from SessionCache import SessionCacheManager, session_manager  # noqa: E402
-from LLM_Handler import invoke_llm  # noqa: E402
-from LLM_Handler import invoke_llm_2
+from LLM_Handler import invoke_llm_with_ssr  # noqa: E402
 
 
 def get_session_manager():
@@ -152,9 +149,9 @@ async def check_session_key(request: Request, call_next):
 @app.get("/set-cookie/")
 async def set_cookie(
     response: Response,
-    request: Request,
     manager: SessionCacheManager = Depends(get_session_manager),
 ):
+    session_key = None
     try:
         session_key = str(
             uuid.uuid4()
@@ -172,7 +169,7 @@ async def set_cookie(
         )  # Debug statement
         return {"message": "Cookie set and session created"}
     except Exception as e:
-        logging.error(f"Caught exception in set_cookie {session_key}: {e}")
+        logging.error(f"Caught exception in set_cookie {session_key or 'undefined'}: {e}")
         raise HTTPException(status_code=500, detail="Error in set_cookie")
 
 
@@ -196,7 +193,7 @@ def generate_response(p_session_key, p_Request):
         if not p_Request.actionPlan:
             logging.warning(f"Session ({p_session_key}) did not specify Action Plan")
             return "You must select an action plan to use this Bot"
-        return invoke_llm_2(sessionCache, p_Request, p_session_key)
+        return invoke_llm_with_ssr(sessionCache, p_Request, p_session_key)
     else:
         response = "Received unknown session key"
         logging.error(
@@ -224,7 +221,7 @@ def chatbot_endpoint(request: Request, message: PyMessage) -> JSONResponse:
         else:
             logging.warning(
                 f"Session ({session_key}) validated access key ({access_key})",
-                extra={"sessionKey": session_key, "accessKey": access_key},
+                extra={"sessionKey": session_key, "accessKey": access_key, "userTime": message.userTimestamp},
             )
 
     response_text = generate_response(session_key, message)
@@ -255,6 +252,7 @@ def delete_session(
 
 @app.get("/classes/")
 async def list_class_directories(request: Request):
+    session_key = None
     try:
         session_key = request.cookies.get("session_key")
         directories = list_directory("classes", "directory")
@@ -373,11 +371,24 @@ async def send_conversation(request: Request, payload: dict):
     lesson = payload.get("lesson") or "Unknown"
     action_plan = payload.get("actionPlan") or "Unknown"
 
-    pdf = await generate_conversation_pdf(session_key, class_name, lesson, action_plan)
+    # Get session cache
+    if session_key is None:
+        raise HTTPException(status_code=401, detail="Session key is missing")
+    
+    session_cache = session_manager.get_session(session_key)
+    if session_cache is None:
+        raise HTTPException(status_code=404, detail="Could not locate Session Key")
 
-    if pdf is not None:
+    # Create HTML exporter
+    html_exporter = HTMLConversationExporter()
 
-        print("PDF created successfully.")
+    try:
+        # Generate HTML content
+        html_content = await html_exporter.generate_conversation_html(
+            session_key, class_name, lesson, action_plan, session_cache
+        )
+
+        print("HTML created successfully.")
 
         with open("static/conversation-email-template.html", "r") as file:
             email_template = file.read()
@@ -385,18 +396,19 @@ async def send_conversation(request: Request, payload: dict):
             email_template = email_template.replace("{{lesson}}", lesson)
             email_template = email_template.replace("{{action_plan}}", action_plan)
 
-            date_string = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            filename = html_exporter.get_filename()
 
             send_email(
                 email,
                 "Conversation with TutorBot",
                 email_template,
-                [(f"{date_string}_TutorBot_Conversation.pdf", pdf)],  # type: ignore
+                [(filename, html_content)],  # type: ignore
             )
 
-            return JSONResponse(content={"message": "PDF created successfully"})
-    else:
-        raise HTTPException(status_code=500, detail="Error creating PDF")
+            return JSONResponse(content={"message": "HTML created successfully"})
+    except Exception as e:
+        logging.error(f"Error creating HTML: {e}", extra={"sessionKey": session_key})
+        raise HTTPException(status_code=500, detail="Error creating HTML")
 
 
 @app.post("/download-conversation")
@@ -407,31 +419,50 @@ async def download_conversation(request: Request, payload: dict):
     lesson = payload.get("lesson")
     action_plan = payload.get("actionPlan")
 
-    pdf = await generate_conversation_pdf(session_key, class_name, lesson, action_plan)
+    # Get session cache
+    if session_key is None:
+        raise HTTPException(status_code=401, detail="Session key is missing")
+    
+    session_cache = session_manager.get_session(session_key)
+    if session_cache is None:
+        raise HTTPException(status_code=404, detail="Could not locate Session Key")
 
-    if pdf is not None:
+    # Create HTML exporter
+    html_exporter = HTMLConversationExporter()
 
-        print("PDF created successfully.")
+    try:
+        # Generate HTML content
+        html_content = await html_exporter.generate_conversation_html(
+            session_key, class_name, lesson, action_plan, session_cache
+        )
 
-        date_string = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        print("HTML created successfully.")
+
+        # Get filename
+        filename = html_exporter.get_filename()
 
         return Response(
-            content=pdf,
-            media_type="application/pdf",
+            content=html_content,
+            media_type="text/html",
             headers={
-                "Content-Disposition": f"inline; filename={date_string}_TutorBot_Conversation.pdf"
+                "Content-Disposition": f"attachment; filename={filename}",
+                "Content-Type": "text/html; charset=utf-8"
             },
         )
-    else:
-        raise HTTPException(status_code=500, detail="Error creating PDF")
+    except Exception as e:
+        logging.error(f"Error creating HTML: {e}", extra={"sessionKey": session_key})
+        raise HTTPException(status_code=500, detail="Error creating HTML")
 
 
 if __name__ == "__main__":
     # This configures the logging utilities so outputs are csv files that can be read with a spreadsheet editor
 
     logging.warning("Logging setup is configured and running TutorBot_Server")
+    
+    # Validate SSR configuration
+    validate_ssr_configuration()
+    logging.info("SSR configuration validated successfully")
 
-    if pyppeteer_executable_path is None:
-        subprocess.run(["pyppeteer-install"], shell=True)
+    # Pyppeteer removed - now using HTML export instead of PDF
 
     uvicorn.run("TutorBot_Server:app", host="0.0.0.0", port=port)

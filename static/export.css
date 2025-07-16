@@ -1,0 +1,74 @@
+/* Export-specific styles (header, container, metadata) */
+
+body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+		Arial, sans-serif;
+	margin: 0;
+	padding: 20px;
+	background-color: #f5f5f5;
+	color: #333;
+	line-height: 1.6;
+}
+
+.container {
+	max-width: 1200px;
+	margin: 0 auto;
+	background-color: white;
+	border-radius: 10px;
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+	padding: 30px;
+}
+
+.header {
+	text-align: center;
+	margin-bottom: 30px;
+	padding-bottom: 20px;
+	border-bottom: 2px solid #e0e0e0;
+}
+
+.header h1 {
+	color: #007bff;
+	margin: 0 0 10px 0;
+	font-size: 28px;
+}
+
+.header p {
+	margin: 5px 0;
+	color: #666;
+}
+
+.metadata {
+	background-color: #f8f9fa;
+	padding: 15px;
+	border-radius: 5px;
+	font-size: 14px;
+}
+
+.metadata strong {
+	color: #495057;
+}
+
+@media (max-width: 768px) {
+	body {
+		padding: 10px;
+	}
+
+	.container {
+		padding: 20px;
+	}
+
+	.header h1 {
+		font-size: 24px;
+	}
+}
+
+@media print {
+	body {
+		background-color: white;
+	}
+
+	.container {
+		box-shadow: none;
+		max-width: 100%;
+	}
+}

@@ -55,11 +55,7 @@ if not s3_bucket_path and cloud_mode_enabled:
     logging.error(error_message)
     raise ValueError(error_message)
 
-pyppeteer_executable_path = typing.cast(str, os.getenv("PYPPETEER_EXECUTABLE_PATH"))
-if not pyppeteer_executable_path:
-    error_message = "Pyppeteer executable path not set, using default path"
-
-    logging.warning(error_message)
+# Pyppeteer removed - now using HTML export instead of PDF
 
 mailgun_enabled = typing.cast(bool, os.getenv("MAILGUN_ENABLED") == "true")
 if not mailgun_enabled:
@@ -108,6 +104,29 @@ if not api_key and model_provider != "GOOGLE":
 max_tokens = int(os.getenv("MAX_TOKENS") or 10000)
 
 max_conversation_tokens = int(os.getenv("MAX_CONVERSATION_TOKENS") or 20000)
+
+# SSR (Structured Semantic Retrieval) Configuration Constants
+SSR_MAX_ITERATIONS = 4
+SSR_CONTENT_SIZE_LIMIT_TOKENS = 20000
+BYTES_PER_TOKEN_ESTIMATE = 4
+SSR_CONTENT_DIRECTORY = "ssrcontent"
+SSR_XML_RESPONSE_TAG = "SSR_response"
+SSR_REQUEST_TAG = "SSR_requesting_content"
+
+
+def validate_ssr_configuration():
+    """Validate SSR-related configuration on startup."""
+    if max_conversation_tokens <= 0:
+        raise ValueError("MAX_CONVERSATION_TOKENS must be positive")
+    
+    if SSR_CONTENT_SIZE_LIMIT_TOKENS > max_conversation_tokens:
+        logging.warning("SSR content limit exceeds conversation limit")
+    
+    if SSR_MAX_ITERATIONS <= 0:
+        raise ValueError("SSR_MAX_ITERATIONS must be positive")
+    
+    if BYTES_PER_TOKEN_ESTIMATE <= 0:
+        raise ValueError("BYTES_PER_TOKEN_ESTIMATE must be positive")
 
 max_retries = int(os.getenv("MAX_RETRIES") or "2")
 

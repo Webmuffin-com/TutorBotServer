@@ -27,3 +27,7 @@ dist
 
 # ENV
 .env
+
+# CLAUDE
+.claude
+CLAUDE.md
