@@ -10,7 +10,6 @@ logger = get_logger()
 service_name = "tutorbot-server"
 env = os.getenv("ENV", "dev")
 
-
 current_working_path = os.getcwd()
 local_assets_path = os.path.normpath(current_working_path)
 if not os.path.exists(local_assets_path):
@@ -23,42 +22,58 @@ port = int(os.getenv("PORT") or 3000)
 cloud_mode_enabled = typing.cast(bool, os.getenv("CLOUD_MODE") == "true")
 if not cloud_mode_enabled:
     logger.info(
-        "Cloud mode disabled, using local filesystem", extra={"reason": "CLOUD_MODE environment variable not set"}
+        "Cloud mode disabled, using local filesystem",
+        extra={"reason": "CLOUD_MODE environment variable not set"},
     )
 
 s3_bucket_endpoint = typing.cast(str, os.getenv("S3_BUCKET_ENDPOINT"))
 if not s3_bucket_endpoint and cloud_mode_enabled:
     error_message = "Cloud mode is enabled but the required environment variable S3_BUCKET_ENDPOINT is not set."
 
-    logger.error("S3 bucket endpoint not configured", extra={"cloud_mode": "enabled", "missing_var": "S3_BUCKET_ENDPOINT"})
+    logger.error(
+        "S3 bucket endpoint not configured",
+        extra={"cloud_mode": "enabled", "missing_var": "S3_BUCKET_ENDPOINT"},
+    )
     raise ValueError(error_message)
 
 s3_bucket_access_key = typing.cast(SecretStr, os.getenv("S3_BUCKET_ACCESS_KEY"))
 if not s3_bucket_access_key and cloud_mode_enabled:
     error_message = "Cloud mode is enabled but the required environment variable S3_BUCKET_ACCESS_KEY is not set."
 
-    logger.error("S3 bucket access key not configured", extra={"cloud_mode": "enabled", "missing_var": "S3_BUCKET_ACCESS_KEY"})
+    logger.error(
+        "S3 bucket access key not configured",
+        extra={"cloud_mode": "enabled", "missing_var": "S3_BUCKET_ACCESS_KEY"},
+    )
     raise ValueError(error_message)
 
 s3_bucket_access_secret = typing.cast(SecretStr, os.getenv("S3_BUCKET_ACCESS_SECRET"))
 if not s3_bucket_access_secret and cloud_mode_enabled:
     error_message = "Cloud mode is enabled but the required environment variable S3_BUCKET_ACCESS_SECRET is not set."
 
-    logger.error("S3 bucket access secret not configured", extra={"cloud_mode": "enabled", "missing_var": "S3_BUCKET_ACCESS_SECRET"})
+    logger.error(
+        "S3 bucket access secret not configured",
+        extra={"cloud_mode": "enabled", "missing_var": "S3_BUCKET_ACCESS_SECRET"},
+    )
     raise ValueError(error_message)
 
 s3_bucket_name = typing.cast(str, os.getenv("S3_BUCKET_NAME"))
 if not s3_bucket_name and cloud_mode_enabled:
     error_message = "Cloud mode is enabled but the required environment variable S3_BUCKET_NAME is not set."
 
-    logger.error("S3 bucket name not configured", extra={"cloud_mode": "enabled", "missing_var": "S3_BUCKET_NAME"})
+    logger.error(
+        "S3 bucket name not configured",
+        extra={"cloud_mode": "enabled", "missing_var": "S3_BUCKET_NAME"},
+    )
     raise ValueError(error_message)
 
 s3_bucket_path = typing.cast(str, os.getenv("S3_BUCKET_PATH"))
 if not s3_bucket_path and cloud_mode_enabled:
     error_message = "Cloud mode is enabled but the required environment variable S3_BUCKET_PATH is not set."
 
-    logger.error("S3 bucket path not configured", extra={"cloud_mode": "enabled", "missing_var": "S3_BUCKET_PATH"})
+    logger.error(
+        "S3 bucket path not configured",
+        extra={"cloud_mode": "enabled", "missing_var": "S3_BUCKET_PATH"},
+    )
     raise ValueError(error_message)
 
 # Pyppeteer removed - now using HTML export instead of PDF
@@ -66,45 +81,63 @@ if not s3_bucket_path and cloud_mode_enabled:
 mailgun_enabled = typing.cast(bool, os.getenv("MAILGUN_ENABLED") == "true")
 if not mailgun_enabled:
     logger.info(
-        "Mailgun disabled, email functionality unavailable", extra={"reason": "MAILGUN_ENABLED environment variable not set"}
+        "Mailgun disabled, email functionality unavailable",
+        extra={"reason": "MAILGUN_ENABLED environment variable not set"},
     )
 
 mailgun_api_url = typing.cast(str, os.getenv("MAILGUN_API_URL"))
 if not mailgun_api_url and mailgun_enabled:
     error_message = "Mailgun is enabled but the required environment variable MAILGUN_API_URL is not set."
 
-    logger.error("Mailgun API URL not configured", extra={"mailgun_enabled": "true", "missing_var": "MAILGUN_API_URL"})
+    logger.error(
+        "Mailgun API URL not configured",
+        extra={"mailgun_enabled": "true", "missing_var": "MAILGUN_API_URL"},
+    )
     raise ValueError(error_message)
 
 mailgun_api_key = typing.cast(str, os.getenv("MAILGUN_API_KEY"))
 if not mailgun_api_key and mailgun_enabled:
     error_message = "Mailgun is enabled but the required environment variable MAILGUN_API_KEY is not set."
 
-    logger.error("Mailgun API key not configured", extra={"mailgun_enabled": "true", "missing_var": "MAILGUN_API_KEY"})
+    logger.error(
+        "Mailgun API key not configured",
+        extra={"mailgun_enabled": "true", "missing_var": "MAILGUN_API_KEY"},
+    )
     raise ValueError(error_message)
 
 mailgun_from_address = typing.cast(str, os.getenv("MAILGUN_FROM_ADDRESS"))
 if not mailgun_from_address and mailgun_enabled:
     error_message = "Mailgun is enabled but the required environment variable MAILGUN_FROM_ADDRESS is not set."
 
-    logger.error("Mailgun from address not configured", extra={"mailgun_enabled": "true", "missing_var": "MAILGUN_FROM_ADDRESS"})
+    logger.error(
+        "Mailgun from address not configured",
+        extra={"mailgun_enabled": "true", "missing_var": "MAILGUN_FROM_ADDRESS"},
+    )
     raise ValueError(error_message)
 
 
 model_provider = typing.cast(str, os.getenv("MODEL_PROVIDER"))
 if not model_provider:
-    logger.error("No model provider selected, using default", extra={"default_provider": "OPENAI"})
+    logger.error(
+        "No model provider selected, using default",
+        extra={"default_provider": "OPENAI"},
+    )
     model_provider = "OPENAI"
 
 model = typing.cast(str, os.getenv("MODEL"))
 if not model:
-    logger.error("No model selected, using default", extra={"default_model": "atgpt-4o-latest"})
+    logger.error(
+        "No model selected, using default", extra={"default_model": "atgpt-4o-latest"}
+    )
     model = "chatgpt-4o-latest"
 logger.info("Model configured", extra={"model": str(model)})
 
 api_key = typing.cast(SecretStr, os.getenv("API_KEY"))
 if not api_key and model_provider != "GOOGLE":
-    logger.error("API key not configured", extra={"missing_var": "API_KEY", "model_provider": str(model_provider)})
+    logger.error(
+        "API key not configured",
+        extra={"missing_var": "API_KEY", "model_provider": str(model_provider)},
+    )
     raise ValueError("API_KEY environment variable not set")
 
 max_tokens = int(os.getenv("MAX_TOKENS") or 10000)
@@ -126,7 +159,13 @@ def validate_ssr_configuration():
         raise ValueError("MAX_CONVERSATION_TOKENS must be positive")
 
     if SSR_CONTENT_SIZE_LIMIT_TOKENS > max_conversation_tokens:
-        logger.warning("SSR content limit exceeds conversation limit", extra={"ssr_limit": str(SSR_CONTENT_SIZE_LIMIT_TOKENS), "conversation_limit": str(max_conversation_tokens)})
+        logger.warning(
+            "SSR content limit exceeds conversation limit",
+            extra={
+                "ssr_limit": str(SSR_CONTENT_SIZE_LIMIT_TOKENS),
+                "conversation_limit": str(max_conversation_tokens),
+            },
+        )
 
     if SSR_MAX_ITERATIONS <= 0:
         raise ValueError("SSR_MAX_ITERATIONS must be positive")
@@ -160,7 +199,8 @@ if not ibm_url:
 ibm_project_id = typing.cast(str, os.getenv("IBM_PROJECT_ID"))
 if not ibm_project_id and model_provider == "IBM":
     logger.error(
-        "IBM project ID not configured", extra={"missing_var": "IBM_PROJECT_ID", "model_provider": "IBM"}
+        "IBM project ID not configured",
+        extra={"missing_var": "IBM_PROJECT_ID", "model_provider": "IBM"},
     )
     raise ValueError("IBM_PROJECT_ID environment variable not set")
 
@@ -190,7 +230,9 @@ if not loki_password:
 loki_org_id = typing.cast(str, os.getenv("LOKI_ORG_ID"))
 if not loki_org_id:
     error_message = "LOKI_ORG_ID environment variable is required"
-    logger.error("Loki organization ID not configured", extra={"missing_var": "LOKI_ORG_ID"})
+    logger.error(
+        "Loki organization ID not configured", extra={"missing_var": "LOKI_ORG_ID"}
+    )
     raise ValueError(error_message)
 
 # Loki labels (optional)
@@ -199,4 +241,6 @@ loki_labels = typing.cast(str, os.getenv("LOKI_LABELS", ""))
 logger.info("Loki logging configured", extra={"loki_url": str(loki_url)})
 logger.info("Loki organization ID configured", extra={"loki_org_id": str(loki_org_id)})
 if loki_labels:
-    logger.info("Loki additional labels configured", extra={"loki_labels": str(loki_labels)})
+    logger.info(
+        "Loki additional labels configured", extra={"loki_labels": str(loki_labels)}
+    )
