@@ -118,7 +118,6 @@ def open_text_file(file_path: str) -> Optional[str]:
 
             return s3_file_content
         except Exception:
-            # print(e)
             return None
     else:
         joined_path = os.path.join(assets_path, file_path)

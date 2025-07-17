@@ -45,11 +45,11 @@ from utils.filesystem import (  # noqa: E402
     check_directory_exists,
     list_directory,
 )
-from SessionCache import SessionCacheManager, session_manager  # noqa: E402
+from SessionCache import SessionCacheManager, session_manager, SessionData  # noqa: E402
 from LLM_Handler import invoke_llm_with_ssr  # noqa: E402
 
 
-def get_session_manager():
+def get_session_manager() -> SessionCacheManager:
     return session_manager
 
 
@@ -168,7 +168,7 @@ async def set_cookie(
         session_key = str(
             uuid.uuid4()
         )  # Use existing session key if available, otherwise set a default or generate a new one
-        session_data = {"initial": "data"}  # Initial data for the session
+        session_data = SessionData()  # Create a proper SessionData object
         manager.add_session(session_key, session_data)
         response.set_cookie(
             key="session_key",
@@ -194,7 +194,7 @@ async def favicon():
 
 
 # Define your chatbot logic
-def generate_response(p_session_key, p_Request):
+def generate_response(p_session_key: str, p_Request: PyMessage) -> str:
 
     sessionCache = session_manager.get_session(p_session_key)
 

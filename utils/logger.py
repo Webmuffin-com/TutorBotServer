@@ -2,6 +2,7 @@ import logging
 import os
 import time
 import requests
+import json
 from typing import Optional, Tuple
 
 
@@ -70,13 +71,27 @@ class LokiHandler(logging.Handler):
             # 1) plain message text
             text = record.getMessage()
 
-            # 2) flat "details"; convert every value to str
-            ignored = {"msg", "args", "exc_info", "exc_text", "stack_info"}
-            detail = {
-                k: str(v)
-                for k, v in record.__dict__.items()
-                if k not in ignored and not k.startswith("_")
+            # 2) flat "details"; properly serialize values
+            ignored = {
+                "msg",
+                "args",
+                "exc_info",
+                "exc_text",
+                "stack_info",
+                "levelname",
+                "levelno",
+                "name",
+                "taskName",
             }
+            detail = {}
+            for k, v in record.__dict__.items():
+                if k not in ignored and not k.startswith("_"):
+                    if v is None:
+                        continue
+                    elif isinstance(v, str):
+                        detail[k] = v
+                    else:
+                        detail[k] = json.dumps(v)
 
             # 3) automatically add detected_level field
             detail["detected_level"] = record.levelname.lower()

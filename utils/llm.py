@@ -1,6 +1,7 @@
 import markdown
 import nh3
 from copy import deepcopy
+from typing import List, Tuple
 
 from utils.filesystem import open_text_file
 from utils.logger import get_logger
@@ -8,7 +9,7 @@ from utils.logger import get_logger
 logger = get_logger()
 
 
-def validate_access_key(access_key: str, session_key: str):
+def validate_access_key(access_key: str, session_key: str) -> bool:
 
     available_keys = open_text_file("config/access_keys.txt")
 
@@ -29,9 +30,11 @@ def validate_access_key(access_key: str, session_key: str):
     return True
 
 
-def get_llm_file(class_directory: str, type: str, file_name: str, session_key: str):
+def get_llm_file(
+    class_directory: str, type: str, file_name: str, session_key: str
+) -> str:
 
-    if (type):
+    if type:
         content = open_text_file(f"classes/{class_directory}/{type}/{file_name}")
     else:
         content = open_text_file(f"classes/{class_directory}/{file_name}")
@@ -49,7 +52,7 @@ def get_llm_file(class_directory: str, type: str, file_name: str, session_key: s
             extra={"session_key": session_key, "type": type, "file_name": file_name},
         )
     else:
-        logger.warning(
+        logger.info(
             "Loaded file",
             extra={"session_key": session_key, "type": type, "file_name": file_name},
         )
@@ -57,7 +60,7 @@ def get_llm_file(class_directory: str, type: str, file_name: str, session_key: s
     return content
 
 
-def format_conversation(conversation):
+def format_conversation(conversation: List[Tuple[str, str]]) -> List[str]:
     user_message = """<div class="user-message"><h2 class="message-text">User: </h2><p>{user_input}</p></div>"""
     assistant_message = """<div class="bot-message"><h2 class="message-text">Bot:</h2>{assistant_response}</div>"""
 

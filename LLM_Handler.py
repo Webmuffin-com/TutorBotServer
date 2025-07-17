@@ -1,7 +1,9 @@
 from dataclasses import dataclass
-import json
+from typing import List, Tuple
 
 from fastapi import HTTPException
+from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import BaseMessage
 
 from constants import (
     model_provider,
@@ -29,7 +31,25 @@ from utils.llm import get_llm_file
 from utils.logger import get_logger
 from bs4 import BeautifulSoup, Tag
 
+# Import for type annotations only
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from SessionCache import SessionCache
+
 logger = get_logger()
+
+
+def extract_message_content(message: BaseMessage) -> str:
+    """Safely extract content from BaseMessage, handling both string and list content."""
+    if isinstance(message.content, str):
+        return message.content
+    elif isinstance(message.content, list):
+        # For list content, join all string elements
+        return " ".join(str(item) for item in message.content)
+    else:
+        return str(message.content) if message.content else ""
+
 
 LastResponse = ""
 
@@ -50,7 +70,7 @@ def format_token_usage_message(
 
 def extract_ssr_content_request(
     llm_response_content: str,
-) -> tuple[bool, list[str], str]:
+) -> Tuple[bool, List[str], str]:
     """
     Extract SSR content request from LLM response.
     Returns: (has_ssr_request, requested_keys, answer_text)
@@ -91,11 +111,11 @@ class PromptBuilder:
         scenario: str,
         conundrum: str,
         additional_content: str,
-        conversation_history: list,
+        conversation_history: List[Tuple[str, str]],
         user_request: str,
         action_plan: str,
         loaded_content_message: str = "",
-    ) -> list:
+    ) -> List[Tuple[str, str]]:
         """Build prompt format optimized for Anthropic models."""
         system_content = f"{scenario}\n{conundrum}\n{additional_content}"
         user_content = f"Respond to User's Request = ({loaded_content_message + user_request}) following these instructions ({action_plan})"
@@ -110,11 +130,11 @@ class PromptBuilder:
         scenario: str,
         conundrum: str,
         additional_content: str,
-        conversation_history: list,
+        conversation_history: List[Tuple[str, str]],
         user_request: str,
         action_plan: str,
         loaded_content_message: str = "",
-    ) -> list:
+    ) -> List[Tuple[str, str]]:
         """Build standard prompt format for other LLM providers."""
         messages = []
         if scenario:
@@ -134,11 +154,11 @@ class PromptBuilder:
         scenario: str,
         conundrum: str,
         additional_content: str,
-        conversation_history: list,
+        conversation_history: List[Tuple[str, str]],
         user_request: str,
         action_plan: str,
         loaded_content_message: str = "",
-    ) -> list:
+    ) -> List[Tuple[str, str]]:
         """Build prompt using appropriate strategy based on model provider."""
         if model_provider == "ANTHROPIC":
             return PromptBuilder.build_anthropic_prompt(
@@ -173,12 +193,12 @@ class SSRIterationState:
     loaded_content_message: str = ""
     conversation_truncated: bool = False
 
-    def add_tokens(self, input_tokens: int, output_tokens: int):
+    def add_tokens(self, input_tokens: int, output_tokens: int) -> None:
         """Add token counts to running totals."""
         self.total_input_tokens += input_tokens
         self.total_output_tokens += output_tokens
 
-    def increment_iteration(self):
+    def increment_iteration(self) -> None:
         """Increment iteration counter."""
         self.iteration_count += 1
 
@@ -190,12 +210,12 @@ class SSRIterationState:
 class SSRContentLoader:
     """Handles loading and size management of SSR content files."""
 
-    def __init__(self, max_size_tokens: int = SSR_CONTENT_SIZE_LIMIT_TOKENS):
+    def __init__(self, max_size_tokens: int = SSR_CONTENT_SIZE_LIMIT_TOKENS) -> None:
         self.max_size_bytes = max_size_tokens * BYTES_PER_TOKEN_ESTIMATE
 
     def load_content_files(
-        self, request: PyMessage, session_key: str, content_keys: list[str]
-    ) -> tuple[str, str]:
+        self, request: PyMessage, session_key: str, content_keys: List[str]
+    ) -> Tuple[str, str]:
         """Load content files with size management."""
         loaded_contents = []
         loaded_file_names = []
@@ -238,7 +258,7 @@ class SSRContentLoader:
         return xml_content, status_message
 
 
-def initialize_llm():
+def initialize_llm() -> BaseChatModel:
 
     match model_provider:
         case "OPENAI":
@@ -315,7 +335,7 @@ except Exception as e:
     logger.critical("Failed to initialize LLM", extra={"error": str(e)})
 
 
-def get_token_count(llm_response, p_sessionKey):
+def get_token_count(llm_response: BaseMessage, p_sessionKey: str) -> Tuple[int, int]:
     input_tokens = output_tokens = 0
 
     # Safely access token usage metrics
@@ -339,7 +359,9 @@ def get_token_count(llm_response, p_sessionKey):
     return input_tokens, output_tokens
 
 
-def invoke_llm_with_ssr(p_SessionCache, p_Request, p_sessionKey):
+def invoke_llm_with_ssr(
+    p_SessionCache: "SessionCache", p_Request: PyMessage, p_sessionKey: str
+) -> str:
     global LastResponse
     try:
 
@@ -370,6 +392,14 @@ def invoke_llm_with_ssr(p_SessionCache, p_Request, p_sessionKey):
         content_loader = SSRContentLoader()
         ssr_state = SSRIterationState()
 
+        logger.info(
+            "Starting SSR processing loop",
+            extra={
+                "session_key": p_sessionKey,
+                "max_iterations": str(SSR_MAX_ITERATIONS),
+            },
+        )
+
         while True:
             ssr_state.increment_iteration()
 
@@ -392,18 +422,16 @@ def invoke_llm_with_ssr(p_SessionCache, p_Request, p_sessionKey):
             )
 
             # transform tuples into json and dump as string
-            parsed_messages = [
-                {"role": role, "content": content} for role, content in messages
-            ]
-
-            print(f"Parsed Messages: {json.dumps(parsed_messages, indent=2)}")
+            parsed_messages = (
+                p_SessionCache.m_simpleCounterLLMConversation.get_serializable_conversation()
+            )
 
             if ssr_state.iteration_count == 1:
                 logger.info(
                     "USER_REQUEST",
                     extra={
                         "session_key": p_sessionKey,
-                        "messages": json.dumps(parsed_messages),
+                        "messages": parsed_messages,
                     },
                 )
             else:
@@ -411,12 +439,12 @@ def invoke_llm_with_ssr(p_SessionCache, p_Request, p_sessionKey):
                     "SSR_RESPONSE",
                     extra={
                         "session_key": p_sessionKey,
-                        "messages": json.dumps(parsed_messages),
+                        "messages": parsed_messages,
                     },
                 )
 
             LLMResponse = llm.invoke(messages)
-            LLMMessage = str(LLMResponse.content) if LLMResponse.content else ""
+            LLMMessage = extract_message_content(LLMResponse)
             request_token_count, response_token_count = get_token_count(
                 LLMResponse, p_sessionKey
             )
@@ -424,12 +452,35 @@ def invoke_llm_with_ssr(p_SessionCache, p_Request, p_sessionKey):
             ssr_state.add_tokens(request_token_count, response_token_count)
 
             # Process the LLM response for SSR content requests
-            response_content = str(LLMResponse.content) if LLMResponse.content else ""
+            response_content = extract_message_content(LLMResponse)
             has_ssr_request, requested_keys, answer_text = extract_ssr_content_request(
                 response_content
             )
 
+            logger.info(
+                "SSR loop condition check",
+                extra={
+                    "session_key": p_sessionKey,
+                    "iteration_count": str(ssr_state.iteration_count),
+                    "has_ssr_request": str(has_ssr_request),
+                    "requested_keys": requested_keys,
+                    "answer_text_present": str(bool(answer_text)),
+                    "loop_will_continue": str(
+                        has_ssr_request and not ssr_state.has_exceeded_max_iterations()
+                    ),
+                },
+            )
+
             if not has_ssr_request:
+                logger.info(
+                    "SSR loop terminating - no content request found",
+                    extra={
+                        "session_key": p_sessionKey,
+                        "iteration_count": str(ssr_state.iteration_count),
+                        "reason": "has_ssr_request is False",
+                        "has_answer_text": str(bool(answer_text)),
+                    },
+                )
                 if answer_text:
                     # SSR response without content request - return final answer
                     LLMMessage = format_token_usage_message(
@@ -442,15 +493,6 @@ def invoke_llm_with_ssr(p_SessionCache, p_Request, p_sessionKey):
                 break
             # if more content is being requested and exceeded max iterations, use what you have.
             if ssr_state.has_exceeded_max_iterations():
-                logger.warning(
-                    "SSR Loop exceeded maximum iterations",
-                    extra={
-                        "session_key": p_sessionKey,
-                        "max_iterations": str(SSR_MAX_ITERATIONS),
-                        "iteration_count": str(ssr_state.iteration_count),
-                        "answer_text": answer_text,
-                    },
-                )
 
                 LLMMessage = format_token_usage_message(
                     ssr_state.total_input_tokens,
@@ -459,14 +501,41 @@ def invoke_llm_with_ssr(p_SessionCache, p_Request, p_sessionKey):
                 )
                 LLMMessage += answer_text + "\n"
                 LLMMessage += "**SSR exceeded loop count.  Answer may not have considered all information**"
+
+                logger.warning(
+                    "SSR Loop exceeded maximum iterations",
+                    extra={
+                        "session_key": p_sessionKey,
+                        "max_iterations": str(SSR_MAX_ITERATIONS),
+                        "iteration_count": str(ssr_state.iteration_count),
+                        "reason": "iteration_count > SSR_MAX_ITERATIONS",
+                        "requested_keys": requested_keys,
+                        "answer_text": answer_text,
+                        "total_input_tokens": str(ssr_state.total_input_tokens),
+                        "total_output_tokens": str(ssr_state.total_output_tokens),
+                        "llm_message": LLMMessage,
+                    },
+                )
                 break
+
+            # Log the reason the loop is continuing
+            logger.info(
+                "SSR loop continuing - content request detected",
+                extra={
+                    "session_key": p_sessionKey,
+                    "iteration_count": str(ssr_state.iteration_count),
+                    "reason": "has_ssr_request is True and within max iterations",
+                    "requested_keys": requested_keys,
+                    "max_iterations": str(SSR_MAX_ITERATIONS),
+                },
+            )
 
             # We are adding in a new user request acknowledging file content added and its response
             p_SessionCache.m_simpleCounterLLMConversation.add_message(
                 "user", p_Request.text, None
             )
             p_SessionCache.m_simpleCounterLLMConversation.add_message(
-                "assistant", str(LLMResponse.content), None
+                "assistant", extract_message_content(LLMResponse), None
             )
 
             content_loaded, loaded_status = content_loader.load_content_files(
@@ -477,8 +546,10 @@ def invoke_llm_with_ssr(p_SessionCache, p_Request, p_sessionKey):
                 "SSR_RESPONSE and reissued request",
                 extra={
                     "session_key": p_sessionKey,
+                    "iteration_count": str(ssr_state.iteration_count),
                     "loaded_status": loaded_status,
                     "content_loaded": content_loaded,
+                    "requested_keys_count": str(len(requested_keys)),
                 },
             )
 
@@ -492,7 +563,7 @@ def invoke_llm_with_ssr(p_SessionCache, p_Request, p_sessionKey):
             "user", p_Request.text, p_Request.text
         )
         p_SessionCache.m_simpleCounterLLMConversation.add_message(
-            "assistant", str(LLMResponse.content), LLMMessage
+            "assistant", extract_message_content(LLMResponse), LLMMessage
         )
 
         # Check if conversation size management is needed
@@ -521,7 +592,7 @@ def invoke_llm_with_ssr(p_SessionCache, p_Request, p_sessionKey):
                 "session_key": p_sessionKey,
                 "total_input_tokens": str(ssr_state.total_input_tokens),
                 "total_output_tokens": str(ssr_state.total_output_tokens),
-                "llm_response": str(LLMResponse.content),
+                "llm_response": extract_message_content(LLMResponse),
             },
         )
 
@@ -534,8 +605,3 @@ def invoke_llm_with_ssr(p_SessionCache, p_Request, p_sessionKey):
             extra={"session_key": p_sessionKey, "error": str(e)},
         )
         return f"An error ({e}) occurred processing your request. Please try again."
-
-
-if __name__ == "__main__":
-    # Legacy function - no longer needed
-    pass
