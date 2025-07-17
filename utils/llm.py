@@ -1,9 +1,11 @@
-import logging
 import markdown
 import nh3
 from copy import deepcopy
 
 from utils.filesystem import open_text_file
+from utils.logger import get_logger
+
+logger = get_logger()
 
 
 def validate_access_key(access_key: str, session_key: str):
@@ -11,16 +13,16 @@ def validate_access_key(access_key: str, session_key: str):
     available_keys = open_text_file("config/access_keys.txt")
 
     if available_keys is None:
-        logging.warning(
+        logger.error(
             "Access key file not found",
-            extra={"sessionKey": session_key},
+            extra={"session_key": session_key},
         )
         return False
 
     if access_key not in available_keys.splitlines():
-        logging.warning(
+        logger.warning(
             "Invalid access key",
-            extra={"sessionKey": session_key},
+            extra={"session_key": session_key},
         )
         return False
 
@@ -35,21 +37,21 @@ def get_llm_file(class_directory: str, type: str, file_name: str, session_key: s
         content = open_text_file(f"classes/{class_directory}/{file_name}")
 
     if content is None:
-        logging.warning(
-            f"Failed to locate file {file_name}",
-            extra={"sessionKey": session_key},
+        logger.warning(
+            "Failed to locate file",
+            extra={"session_key": session_key, "file_name": file_name},
         )
         return ""
 
     if len(content) == 0:
-        logging.warning(
-            f"{type} file {file_name} is empty.",
-            extra={"sessionKey": session_key},
+        logger.warning(
+            "File is empty",
+            extra={"session_key": session_key, "type": type, "file_name": file_name},
         )
     else:
-        logging.warning(
-            f"Loaded {type} file {file_name}",
-            extra={"sessionKey": session_key},
+        logger.warning(
+            "Loaded file",
+            extra={"session_key": session_key, "type": type, "file_name": file_name},
         )
 
     return content

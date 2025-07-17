@@ -1,5 +1,5 @@
-import logging
 from dataclasses import dataclass
+import json
 
 from fastapi import HTTPException
 
@@ -24,13 +24,12 @@ from constants import (
     SSR_XML_RESPONSE_TAG,
     SSR_REQUEST_TAG,
 )
-from DefaultParameters import get_result_formatting
-from SessionCache import SessionCache
 from utils.types import PyMessage
 from utils.llm import get_llm_file
-from utils.logging import setup_csv_logging
+from utils.logger import get_logger
 from bs4 import BeautifulSoup, Tag
 
+logger = get_logger()
 
 LastResponse = ""
 
@@ -58,11 +57,6 @@ def extract_ssr_content_request(
     """
     soup = BeautifulSoup(llm_response_content, "lxml-xml")
     ssr_response = soup.find(SSR_XML_RESPONSE_TAG)
-
-    logging.warning(
-        f"SSR Response: {ssr_response}",
-        extra={"sessionKey": "unknown"},  # Replace with actual session key if available
-    )
 
     if not isinstance(ssr_response, Tag):
         return False, [], ""
@@ -216,7 +210,9 @@ class SSRContentLoader:
             )
 
             if not content:
-                logging.warning(f"Failed to load content for {content_key}")
+                logger.error(
+                    "Failed to load SSR content", extra={"content_key": content_key}
+                )
                 continue
 
             content_size = len(content.encode("utf-8"))
@@ -229,8 +225,8 @@ class SSRContentLoader:
                 loaded_file_names.append(content_key)
                 running_size += content_size
             else:
-                logging.warning(
-                    f"Content limit exceeded with ({content_key}). Returning partial content."
+                logger.info(
+                    "SSR content limit exceeded", extra={"content_key": content_key}
                 )
                 break
 
@@ -316,118 +312,7 @@ def initialize_llm():
 try:
     llm = initialize_llm()
 except Exception as e:
-    logging.critical(f"Failed to initialize LLM: {e}")
-
-
-def invoke_llm(p_SessionCache: SessionCache, p_Request: PyMessage, p_sessionKey: str):
-    global LastResponse
-    try:
-
-        # we no longer need to define scenario here.  If empty, assume in conundrum
-        scenario = get_llm_file(
-            p_Request.classSelection, "conundrums", "scenario.txt", p_sessionKey
-        )
-
-        # we can work with an empty scenario file
-        if scenario is None:
-            scenario = ""
-
-        conundrum = get_llm_file(
-            p_Request.classSelection, "conundrums", p_Request.lesson, p_sessionKey
-        )
-
-        if conundrum is None:
-            raise HTTPException(status_code=404, detail="Conundrum file not found")
-
-        action_plan = get_llm_file(
-            p_Request.classSelection, "actionplans", p_Request.actionPlan, p_sessionKey
-        )
-
-        print(f"ACTION PLAN: {action_plan}")
-
-        if action_plan is None:
-            action_plan = ""  # Default to an empty string if no action plan is found
-
-        actionPlan = action_plan + get_result_formatting()
-
-        logging.warning(
-            f"LLM User's Request ({p_Request.text})", extra={"sessionKey": p_sessionKey}
-        )
-
-        if model_provider == "ANTHROPIC":
-            Scenario_Conundrum = f"{scenario}\n{conundrum}\n"
-            Request_ActionPlan = f"Respond to Users Request = ({p_Request.text}) following these instructions ({actionPlan})"
-
-            messages = [
-                ("system", Scenario_Conundrum),
-                *p_SessionCache.m_simpleCounterLLMConversation.get_all_previous_messages(),
-                ("user", Request_ActionPlan),
-            ]
-        else:
-            messages = [
-                *([] if scenario == "" else [("system", scenario)]),
-                ("system", conundrum),
-                *p_SessionCache.m_simpleCounterLLMConversation.get_all_previous_messages(),
-                ("user", p_Request.text),
-                ("system", actionPlan),
-            ]
-
-        # Test the messages structure before formatting
-        logging.warning(f"LLM REQUEST\n{messages}", extra={"sessionKey": p_sessionKey})
-
-        if llm is None:
-            raise ValueError("LLM not initialized")
-
-        llm_response = llm.invoke(messages)
-
-        p_SessionCache.m_simpleCounterLLMConversation.add_message(
-            "user", p_Request.text, "LLM"
-        )  # now we add the request.
-
-        BotResponse = str(llm_response.content)
-
-        # Log token usage metrics
-        if llm_response.response_metadata:
-            token_usage = llm_response.response_metadata.get("token_usage")
-
-            if token_usage:
-                logging.info(
-                    f"Tokens used - Prompt tokens: {token_usage.get('prompt_tokens')}, Completion tokens: \
-            {token_usage.get('completion_tokens')}, Total tokens: {token_usage.get('total_tokens')}",
-                    extra={"sessionKey": p_sessionKey},
-                )
-
-        logging.warning(
-            f"LLM_RESPONSE:\n{BotResponse}).\n\nDETAILS ({llm_response})",
-            extra={"sessionKey": p_sessionKey},
-        )
-        p_SessionCache.m_simpleCounterLLMConversation.add_message(
-            "assistant", BotResponse, "LLM"
-        )  # now we add the request.
-
-        # Hacked because conversation limits are drawfed by other prompt components.
-        # This code only consider what the user request/response is ignore SSR activity.
-        user_conversation_size = (
-            p_SessionCache.m_simpleCounterLLMConversation.get_total_conv_content_bytes()
-        )
-        if calculate_conversation_size_exceeds_limit(
-            user_conversation_size, max_conversation_tokens
-        ):
-            logging.warning(
-                f"Token usage ({user_conversation_size}) exceeded Max conversation in bytes ({max_conversation_tokens*BYTES_PER_TOKEN_ESTIMATE}).  Removing oldest part of user,attendant conversation"
-            )
-            p_SessionCache.m_simpleCounterLLMConversation.prune_oldest_pair()
-
-        return BotResponse
-
-    except Exception as e:
-        # Handle general exceptions
-        logging.error(
-            f"An exception occurred while calling LLM with first message: {e}",
-            exc_info=True,
-            extra={"sessionKey": p_sessionKey},
-        )
-        return f"An error ({e}) occurred processing your request, Please try again"
+    logger.critical("Failed to initialize LLM", extra={"error": str(e)})
 
 
 def get_token_count(llm_response, p_sessionKey):
@@ -441,9 +326,14 @@ def get_token_count(llm_response, p_sessionKey):
         input_tokens = usage.get("input_tokens", 0)
         output_tokens = usage.get("output_tokens", 0)
 
-        logging.info(
-            f"Tokens used - Input tokens: {input_tokens}, Output tokens: {output_tokens}, Total tokens: {input_tokens + output_tokens}",
-            extra={"sessionKey": p_sessionKey},
+        logger.info(
+            "Token usage",
+            extra={
+                "session_key": p_sessionKey,
+                "input_tokens": str(input_tokens),
+                "output_tokens": str(output_tokens),
+                "total_tokens": str(input_tokens + output_tokens),
+            },
         )
 
     return input_tokens, output_tokens
@@ -493,15 +383,37 @@ def invoke_llm_with_ssr(p_SessionCache, p_Request, p_sessionKey):
                 ssr_state.loaded_content_message,
             )
 
-            logging.warning(
-                f"LLM REQUEST ({ssr_state.iteration_count})",
-                extra={"sessionKey": p_sessionKey},
+            logger.info(
+                "LLM REQUEST",
+                extra={
+                    "session_key": p_sessionKey,
+                    "iteration_count": str(ssr_state.iteration_count),
+                },
             )
 
+            # transform tuples into json and dump as string
+            parsed_messages = [
+                {"role": role, "content": content} for role, content in messages
+            ]
+
+            print(f"Parsed Messages: {json.dumps(parsed_messages, indent=2)}")
+
             if ssr_state.iteration_count == 1:
-                logging.warning("USER_REQUEST", extra={"sessionKey": p_sessionKey})
+                logger.info(
+                    "USER_REQUEST",
+                    extra={
+                        "session_key": p_sessionKey,
+                        "messages": json.dumps(parsed_messages),
+                    },
+                )
             else:
-                logging.warning("SSR_RESPONSE", extra={"sessionKey": p_sessionKey})
+                logger.info(
+                    "SSR_RESPONSE",
+                    extra={
+                        "session_key": p_sessionKey,
+                        "messages": json.dumps(parsed_messages),
+                    },
+                )
 
             LLMResponse = llm.invoke(messages)
             LLMMessage = str(LLMResponse.content) if LLMResponse.content else ""
@@ -530,9 +442,14 @@ def invoke_llm_with_ssr(p_SessionCache, p_Request, p_sessionKey):
                 break
             # if more content is being requested and exceeded max iterations, use what you have.
             if ssr_state.has_exceeded_max_iterations():
-                logging.warning(
-                    f"SSR Loop exceeded {SSR_MAX_ITERATIONS} loops.  Going with what we have",
-                    extra={"sessionKey": p_sessionKey},
+                logger.warning(
+                    "SSR Loop exceeded maximum iterations",
+                    extra={
+                        "session_key": p_sessionKey,
+                        "max_iterations": str(SSR_MAX_ITERATIONS),
+                        "iteration_count": str(ssr_state.iteration_count),
+                        "answer_text": answer_text,
+                    },
                 )
 
                 LLMMessage = format_token_usage_message(
@@ -556,9 +473,13 @@ def invoke_llm_with_ssr(p_SessionCache, p_Request, p_sessionKey):
                 p_Request, p_sessionKey, requested_keys
             )
 
-            logging.warning(
-                f"SSR_RESPONSE ({loaded_status}) and reissued request",
-                extra={"sessionKey": p_sessionKey},
+            logger.info(
+                "SSR_RESPONSE and reissued request",
+                extra={
+                    "session_key": p_sessionKey,
+                    "loaded_status": loaded_status,
+                    "content_loaded": content_loaded,
+                },
             )
 
             ssr_state.additional_content += content_loaded
@@ -582,8 +503,9 @@ def invoke_llm_with_ssr(p_SessionCache, p_Request, p_sessionKey):
             user_conversation_size, max_conversation_tokens
         ):
             ssr_state.conversation_truncated = True
-            logging.warning(
-                f"Conversation exceeded Max conversation size ({user_conversation_size}).  Removing oldest part of user conversation"
+            logger.info(
+                "Conversation exceeded maximum size",
+                extra={"user_conversation_size": str(user_conversation_size)},
             )
             p_SessionCache.m_simpleCounterLLMConversation.prune_oldest_pair()
 
@@ -593,21 +515,27 @@ def invoke_llm_with_ssr(p_SessionCache, p_Request, p_sessionKey):
                 + LLMMessage
             )
 
-        logging.warning(
-            f"USER_RESPONSE({ssr_state.total_input_tokens}, {ssr_state.total_output_tokens}):\n{LLMResponse}",
-            extra={"sessionKey": p_sessionKey},
+        logger.info(
+            "USER_RESPONSE",
+            extra={
+                "session_key": p_sessionKey,
+                "total_input_tokens": str(ssr_state.total_input_tokens),
+                "total_output_tokens": str(ssr_state.total_output_tokens),
+                "llm_response": str(LLMResponse.content),
+            },
         )
 
         return LLMMessage
 
     except Exception as e:
-        logging.error(
-            f"An exception occurred while calling LLM: {e}",
+        logger.error(
+            "Exception occurred while calling LLM",
             exc_info=True,
-            extra={"sessionKey": p_sessionKey},
+            extra={"session_key": p_sessionKey, "error": str(e)},
         )
         return f"An error ({e}) occurred processing your request. Please try again."
 
 
 if __name__ == "__main__":
-    setup_csv_logging()
+    # Legacy function - no longer needed
+    pass

@@ -1,12 +1,13 @@
 import requests
 
-import logging
-
 from constants import (
     mailgun_api_url,
     mailgun_api_key,
     mailgun_from_address,
 )
+from utils.logger import get_logger
+
+logger = get_logger()
 
 
 def send_email(
@@ -29,11 +30,18 @@ def send_email(
 
         if response.status_code == 200:
             # success
-            logging.info(
-                f"Successfully sent an email to '{to_address}' via Mailgun API."
+            logger.info(
+                "Successfully sent email via Mailgun API",
+                extra={"to_address": to_address}
             )
         else:
             # error
-            logging.error(f"Could not send the email, reason: {response.text}")
+            logger.error(
+                "Could not send email",
+                extra={"reason": response.text, "status_code": str(response.status_code)}
+            )
     except Exception as ex:
-        logging.exception(f"Mailgun error: {ex}")
+        logger.exception(
+            "Mailgun error",
+            extra={"error": str(ex)}
+        )
