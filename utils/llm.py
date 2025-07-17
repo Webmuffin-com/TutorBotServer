@@ -23,7 +23,7 @@ def validate_access_key(access_key: str, session_key: str) -> bool:
     if access_key not in available_keys.splitlines():
         logger.warning(
             "Invalid access key",
-            extra={"session_key": session_key},
+            extra={"session_key": session_key, "access_key": access_key},
         )
         return False
 
