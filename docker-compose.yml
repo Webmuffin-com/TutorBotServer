@@ -2,6 +2,7 @@ services:
   app:
     build: .
     environment:
+      - ENV=${ENV:-prod}
       - CLOUD_MODE=${CLOUD_MODE:-true}
       - S3_BUCKET_ENDPOINT=${S3_BUCKET_ENDPOINT}
       - S3_BUCKET_ACCESS_KEY=${S3_BUCKET_ACCESS_KEY}
@@ -12,6 +13,11 @@ services:
       - MAILGUN_API_KEY=${MAILGUN_API_KEY}
       - MAILGUN_API_URL=${MAILGUN_API_URL}
       - MAILGUN_FROM_ADDRESS=${MAILGUN_FROM_ADDRESS}
+      - LOKI_URL=${LOKI_URL:-https://loki.vws.ovh}
+      - LOKI_USER=${LOKI_USER:-loki}
+      - LOKI_PASSWORD=${LOKI_PASSWORD}
+      - LOKI_ORG_ID=webmuffin
+      - LOKI_LABELS=${LOKI_LABELS}
       - MAX_TOKENS=${MAX_TOKENS:-10000}
       - MAX_RETRIES=${MAX_RETRIES:-2}
       - MODEL_PROVIDER=${MODEL_PROVIDER:-OPENAI}
