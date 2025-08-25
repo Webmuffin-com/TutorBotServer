@@ -13,7 +13,16 @@ env = os.getenv("ENV", "dev")
 current_working_path = os.getcwd()
 local_assets_path = os.path.normpath(current_working_path)
 if not os.path.exists(local_assets_path):
-    logger.error("Classes path not found", extra={"path": str(local_assets_path)})
+    logger.error(
+        "Classes path not found",
+        extra={
+            "path": str(local_assets_path),
+            "session_key": "",
+            "class_selection": "",
+            "lesson": "",
+            "action_plan": "",
+        },
+    )
 
 
 port = int(os.getenv("PORT") or 3000)
@@ -23,7 +32,13 @@ cloud_mode_enabled = typing.cast(bool, os.getenv("CLOUD_MODE") == "true")
 if not cloud_mode_enabled:
     logger.info(
         "Cloud mode disabled, using local filesystem",
-        extra={"reason": "CLOUD_MODE environment variable not set"},
+        extra={
+            "reason": "CLOUD_MODE environment variable not set",
+            "session_key": "",
+            "class_selection": "",
+            "lesson": "",
+            "action_plan": "",
+        },
     )
 
 s3_bucket_endpoint = typing.cast(str, os.getenv("S3_BUCKET_ENDPOINT"))
@@ -32,7 +47,14 @@ if not s3_bucket_endpoint and cloud_mode_enabled:
 
     logger.error(
         "S3 bucket endpoint not configured",
-        extra={"cloud_mode": "enabled", "missing_var": "S3_BUCKET_ENDPOINT"},
+        extra={
+            "cloud_mode": "enabled",
+            "missing_var": "S3_BUCKET_ENDPOINT",
+            "session_key": "",
+            "class_selection": "",
+            "lesson": "",
+            "action_plan": "",
+        },
     )
     raise ValueError(error_message)
 
@@ -42,7 +64,14 @@ if not s3_bucket_access_key and cloud_mode_enabled:
 
     logger.error(
         "S3 bucket access key not configured",
-        extra={"cloud_mode": "enabled", "missing_var": "S3_BUCKET_ACCESS_KEY"},
+        extra={
+            "cloud_mode": "enabled",
+            "missing_var": "S3_BUCKET_ACCESS_KEY",
+            "session_key": "",
+            "class_selection": "",
+            "lesson": "",
+            "action_plan": "",
+        },
     )
     raise ValueError(error_message)
 
@@ -52,7 +81,14 @@ if not s3_bucket_access_secret and cloud_mode_enabled:
 
     logger.error(
         "S3 bucket access secret not configured",
-        extra={"cloud_mode": "enabled", "missing_var": "S3_BUCKET_ACCESS_SECRET"},
+        extra={
+            "cloud_mode": "enabled",
+            "missing_var": "S3_BUCKET_ACCESS_SECRET",
+            "session_key": "",
+            "class_selection": "",
+            "lesson": "",
+            "action_plan": "",
+        },
     )
     raise ValueError(error_message)
 
@@ -62,7 +98,14 @@ if not s3_bucket_name and cloud_mode_enabled:
 
     logger.error(
         "S3 bucket name not configured",
-        extra={"cloud_mode": "enabled", "missing_var": "S3_BUCKET_NAME"},
+        extra={
+            "cloud_mode": "enabled",
+            "missing_var": "S3_BUCKET_NAME",
+            "session_key": "",
+            "class_selection": "",
+            "lesson": "",
+            "action_plan": "",
+        },
     )
     raise ValueError(error_message)
 
@@ -72,7 +115,14 @@ if not s3_bucket_path and cloud_mode_enabled:
 
     logger.error(
         "S3 bucket path not configured",
-        extra={"cloud_mode": "enabled", "missing_var": "S3_BUCKET_PATH"},
+        extra={
+            "cloud_mode": "enabled",
+            "missing_var": "S3_BUCKET_PATH",
+            "session_key": "",
+            "class_selection": "",
+            "lesson": "",
+            "action_plan": "",
+        },
     )
     raise ValueError(error_message)
 
@@ -82,7 +132,13 @@ mailgun_enabled = typing.cast(bool, os.getenv("MAILGUN_ENABLED") == "true")
 if not mailgun_enabled:
     logger.info(
         "Mailgun disabled, email functionality unavailable",
-        extra={"reason": "MAILGUN_ENABLED environment variable not set"},
+        extra={
+            "reason": "MAILGUN_ENABLED environment variable not set",
+            "session_key": "",
+            "class_selection": "",
+            "lesson": "",
+            "action_plan": "",
+        },
     )
 
 mailgun_api_url = typing.cast(str, os.getenv("MAILGUN_API_URL"))
@@ -91,7 +147,14 @@ if not mailgun_api_url and mailgun_enabled:
 
     logger.error(
         "Mailgun API URL not configured",
-        extra={"mailgun_enabled": "true", "missing_var": "MAILGUN_API_URL"},
+        extra={
+            "mailgun_enabled": "true",
+            "missing_var": "MAILGUN_API_URL",
+            "session_key": "",
+            "class_selection": "",
+            "lesson": "",
+            "action_plan": "",
+        },
     )
     raise ValueError(error_message)
 
@@ -101,7 +164,14 @@ if not mailgun_api_key and mailgun_enabled:
 
     logger.error(
         "Mailgun API key not configured",
-        extra={"mailgun_enabled": "true", "missing_var": "MAILGUN_API_KEY"},
+        extra={
+            "mailgun_enabled": "true",
+            "missing_var": "MAILGUN_API_KEY",
+            "session_key": "",
+            "class_selection": "",
+            "lesson": "",
+            "action_plan": "",
+        },
     )
     raise ValueError(error_message)
 
@@ -111,7 +181,14 @@ if not mailgun_from_address and mailgun_enabled:
 
     logger.error(
         "Mailgun from address not configured",
-        extra={"mailgun_enabled": "true", "missing_var": "MAILGUN_FROM_ADDRESS"},
+        extra={
+            "mailgun_enabled": "true",
+            "missing_var": "MAILGUN_FROM_ADDRESS",
+            "session_key": "",
+            "class_selection": "",
+            "lesson": "",
+            "action_plan": "",
+        },
     )
     raise ValueError(error_message)
 
@@ -120,23 +197,52 @@ model_provider = typing.cast(str, os.getenv("MODEL_PROVIDER"))
 if not model_provider:
     logger.error(
         "No model provider selected, using default",
-        extra={"default_provider": "OPENAI"},
+        extra={
+            "default_provider": "OPENAI",
+            "session_key": "",
+            "class_selection": "",
+            "lesson": "",
+            "action_plan": "",
+        },
     )
     model_provider = "OPENAI"
 
 model = typing.cast(str, os.getenv("MODEL"))
 if not model:
     logger.error(
-        "No model selected, using default", extra={"default_model": "atgpt-4o-latest"}
+        "No model selected, using default",
+        extra={
+            "default_model": "atgpt-4o-latest",
+            "session_key": "",
+            "class_selection": "",
+            "lesson": "",
+            "action_plan": "",
+        },
     )
     model = "chatgpt-4o-latest"
-logger.info("Model configured", extra={"model": str(model)})
+logger.info(
+    "Model configured",
+    extra={
+        "model": str(model),
+        "session_key": "",
+        "classSelection": "",
+        "lesson": "",
+        "actionPlan": "",
+    },
+)
 
 api_key = typing.cast(SecretStr, os.getenv("API_KEY"))
 if not api_key and model_provider != "GOOGLE":
     logger.error(
         "API key not configured",
-        extra={"missing_var": "API_KEY", "model_provider": str(model_provider)},
+        extra={
+            "missing_var": "API_KEY",
+            "model_provider": str(model_provider),
+            "session_key": "",
+            "class_selection": "",
+            "lesson": "",
+            "action_plan": "",
+        },
     )
     raise ValueError("API_KEY environment variable not set")
 
@@ -164,6 +270,10 @@ def validate_ssr_configuration():
             extra={
                 "ssr_limit": str(SSR_CONTENT_SIZE_LIMIT_TOKENS),
                 "conversation_limit": str(max_conversation_tokens),
+                "session_key": "",
+                "class_selection": "",
+                "lesson": "",
+                "action_plan": "",
             },
         )
 
@@ -200,7 +310,14 @@ ibm_project_id = typing.cast(str, os.getenv("IBM_PROJECT_ID"))
 if not ibm_project_id and model_provider == "IBM":
     logger.error(
         "IBM project ID not configured",
-        extra={"missing_var": "IBM_PROJECT_ID", "model_provider": "IBM"},
+        extra={
+            "missing_var": "IBM_PROJECT_ID",
+            "model_provider": "IBM",
+            "session_key": "",
+            "class_selection": "",
+            "lesson": "",
+            "action_plan": "",
+        },
     )
     raise ValueError("IBM_PROJECT_ID environment variable not set")
 
@@ -212,35 +329,94 @@ system_encoding = (
 loki_url = typing.cast(str, os.getenv("LOKI_URL"))
 if not loki_url:
     error_message = "LOKI_URL environment variable is required"
-    logger.error("Loki URL not configured", extra={"missing_var": "LOKI_URL"})
+    logger.error(
+        "Loki URL not configured",
+        extra={
+            "missing_var": "LOKI_URL",
+            "session_key": "",
+            "class_selection": "",
+            "lesson": "",
+            "action_plan": "",
+        },
+    )
     raise ValueError(error_message)
 
 loki_user = typing.cast(str, os.getenv("LOKI_USER"))
 if not loki_user:
     error_message = "LOKI_USER environment variable is required"
-    logger.error("Loki user not configured", extra={"missing_var": "LOKI_USER"})
+    logger.error(
+        "Loki user not configured",
+        extra={
+            "missing_var": "LOKI_USER",
+            "session_key": "",
+            "class_selection": "",
+            "lesson": "",
+            "action_plan": "",
+        },
+    )
     raise ValueError(error_message)
 
 loki_password = typing.cast(str, os.getenv("LOKI_PASSWORD"))
 if not loki_password:
     error_message = "LOKI_PASSWORD environment variable is required"
-    logger.error("Loki password not configured", extra={"missing_var": "LOKI_PASSWORD"})
+    logger.error(
+        "Loki password not configured",
+        extra={
+            "missing_var": "LOKI_PASSWORD",
+            "session_key": "",
+            "class_selection": "",
+            "lesson": "",
+            "action_plan": "",
+        },
+    )
     raise ValueError(error_message)
 
 loki_org_id = typing.cast(str, os.getenv("LOKI_ORG_ID"))
 if not loki_org_id:
     error_message = "LOKI_ORG_ID environment variable is required"
     logger.error(
-        "Loki organization ID not configured", extra={"missing_var": "LOKI_ORG_ID"}
+        "Loki organization ID not configured",
+        extra={
+            "missing_var": "LOKI_ORG_ID",
+            "session_key": "",
+            "class_selection": "",
+            "lesson": "",
+            "action_plan": "",
+        },
     )
     raise ValueError(error_message)
 
 # Loki labels (optional)
 loki_labels = typing.cast(str, os.getenv("LOKI_LABELS", ""))
 
-logger.info("Loki logging configured", extra={"loki_url": str(loki_url)})
-logger.info("Loki organization ID configured", extra={"loki_org_id": str(loki_org_id)})
+logger.info(
+    "Loki logging configured",
+    extra={
+        "loki_url": str(loki_url),
+        "session_key": "",
+        "classSelection": "",
+        "lesson": "",
+        "actionPlan": "",
+    },
+)
+logger.info(
+    "Loki organization ID configured",
+    extra={
+        "loki_org_id": str(loki_org_id),
+        "session_key": "",
+        "classSelection": "",
+        "lesson": "",
+        "actionPlan": "",
+    },
+)
 if loki_labels:
     logger.info(
-        "Loki additional labels configured", extra={"loki_labels": str(loki_labels)}
+        "Loki additional labels configured",
+        extra={
+            "loki_labels": str(loki_labels),
+            "session_key": "",
+            "class_selection": "",
+            "lesson": "",
+            "action_plan": "",
+        },
     )

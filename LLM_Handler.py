@@ -227,11 +227,21 @@ class SSRContentLoader:
                 SSR_CONTENT_DIRECTORY,
                 f"{content_key}.txt",
                 session_key,
+                request.classSelection or "",
+                request.lesson or "",
+                request.actionPlan or "",
             )
 
             if not content:
                 logger.error(
-                    "Failed to load SSR content", extra={"content_key": content_key}
+                    "Failed to load SSR content",
+                    extra={
+                        "session_key": session_key,
+                        "content_key": content_key,
+                        "class_selection": request.classSelection or "",
+                        "lesson": request.lesson or "",
+                        "action_plan": request.actionPlan or "",
+                    },
                 )
                 continue
 
@@ -246,7 +256,14 @@ class SSRContentLoader:
                 running_size += content_size
             else:
                 logger.info(
-                    "SSR content limit exceeded", extra={"content_key": content_key}
+                    "SSR content limit exceeded",
+                    extra={
+                        "session_key": session_key,
+                        "content_key": content_key,
+                        "class_selection": request.classSelection or "",
+                        "lesson": request.lesson or "",
+                        "action_plan": request.actionPlan or "",
+                    },
                 )
                 break
 
@@ -335,7 +352,13 @@ except Exception as e:
     logger.critical("Failed to initialize LLM", extra={"error": str(e)})
 
 
-def get_token_count(llm_response: BaseMessage, p_sessionKey: str) -> Tuple[int, int]:
+def get_token_count(
+    llm_response: BaseMessage,
+    p_sessionKey: str,
+    class_selection: str = "",
+    lesson: str = "",
+    action_plan: str = "",
+) -> Tuple[int, int]:
     input_tokens = output_tokens = 0
 
     # Safely access token usage metrics
@@ -353,6 +376,9 @@ def get_token_count(llm_response: BaseMessage, p_sessionKey: str) -> Tuple[int, 
                 "input_tokens": str(input_tokens),
                 "output_tokens": str(output_tokens),
                 "total_tokens": str(input_tokens + output_tokens),
+                "class_selection": class_selection,
+                "lesson": lesson,
+                "action_plan": action_plan,
             },
         )
 
@@ -368,18 +394,38 @@ def invoke_llm_with_ssr(
         # start by getting the various prompt components.
         # The p_Request contains the Lesson, Conundrum (Lesson), ActionPlan,
         scenario = (
-            get_llm_file(p_Request.classSelection, "", "scenario.txt", p_sessionKey)
+            get_llm_file(
+                p_Request.classSelection,
+                "",
+                "scenario.txt",
+                p_sessionKey,
+                p_Request.classSelection or "",
+                p_Request.lesson or "",
+                p_Request.actionPlan or "",
+            )
             or ""
         )
 
         conundrum = get_llm_file(
-            p_Request.classSelection, "conundrums", p_Request.lesson, p_sessionKey
+            p_Request.classSelection,
+            "conundrums",
+            p_Request.lesson,
+            p_sessionKey,
+            p_Request.classSelection or "",
+            p_Request.lesson or "",
+            p_Request.actionPlan or "",
         )
         if conundrum is None:
             raise HTTPException(status_code=404, detail="Conundrum file not found")
 
         action_plan = get_llm_file(
-            p_Request.classSelection, "actionplans", p_Request.actionPlan, p_sessionKey
+            p_Request.classSelection,
+            "actionplans",
+            p_Request.actionPlan,
+            p_sessionKey,
+            p_Request.classSelection or "",
+            p_Request.lesson or "",
+            p_Request.actionPlan or "",
         )
         if action_plan is None:
             raise HTTPException(status_code=404, detail="action_plan file not found")
@@ -397,6 +443,9 @@ def invoke_llm_with_ssr(
             extra={
                 "session_key": p_sessionKey,
                 "max_iterations": str(SSR_MAX_ITERATIONS),
+                "class_selection": p_Request.classSelection or "",
+                "lesson": p_Request.lesson or "",
+                "action_plan": p_Request.actionPlan or "",
             },
         )
 
@@ -418,6 +467,9 @@ def invoke_llm_with_ssr(
                 extra={
                     "session_key": p_sessionKey,
                     "iteration_count": str(ssr_state.iteration_count),
+                    "class_selection": p_Request.classSelection or "",
+                    "lesson": p_Request.lesson or "",
+                    "action_plan": p_Request.actionPlan or "",
                 },
             )
 
@@ -432,6 +484,9 @@ def invoke_llm_with_ssr(
                     extra={
                         "session_key": p_sessionKey,
                         "messages": parsed_messages,
+                        "class_selection": p_Request.classSelection or "",
+                        "lesson": p_Request.lesson or "",
+                        "action_plan": p_Request.actionPlan or "",
                     },
                 )
             else:
@@ -440,13 +495,20 @@ def invoke_llm_with_ssr(
                     extra={
                         "session_key": p_sessionKey,
                         "messages": parsed_messages,
+                        "class_selection": p_Request.classSelection or "",
+                        "lesson": p_Request.lesson or "",
+                        "action_plan": p_Request.actionPlan or "",
                     },
                 )
 
             LLMResponse = llm.invoke(messages)
             LLMMessage = extract_message_content(LLMResponse)
             request_token_count, response_token_count = get_token_count(
-                LLMResponse, p_sessionKey
+                LLMResponse,
+                p_sessionKey,
+                p_Request.classSelection or "",
+                p_Request.lesson or "",
+                p_Request.actionPlan or "",
             )
 
             ssr_state.add_tokens(request_token_count, response_token_count)
@@ -468,6 +530,9 @@ def invoke_llm_with_ssr(
                     "loop_will_continue": str(
                         has_ssr_request and not ssr_state.has_exceeded_max_iterations()
                     ),
+                    "class_selection": p_Request.classSelection or "",
+                    "lesson": p_Request.lesson or "",
+                    "action_plan": p_Request.actionPlan or "",
                 },
             )
 
@@ -479,6 +544,9 @@ def invoke_llm_with_ssr(
                         "iteration_count": str(ssr_state.iteration_count),
                         "reason": "has_ssr_request is False",
                         "has_answer_text": str(bool(answer_text)),
+                        "class_selection": p_Request.classSelection or "",
+                        "lesson": p_Request.lesson or "",
+                        "action_plan": p_Request.actionPlan or "",
                     },
                 )
                 if answer_text:
@@ -514,6 +582,9 @@ def invoke_llm_with_ssr(
                         "total_input_tokens": str(ssr_state.total_input_tokens),
                         "total_output_tokens": str(ssr_state.total_output_tokens),
                         "llm_message": LLMMessage,
+                        "class_selection": p_Request.classSelection or "",
+                        "lesson": p_Request.lesson or "",
+                        "action_plan": p_Request.actionPlan or "",
                     },
                 )
                 break
@@ -527,6 +598,9 @@ def invoke_llm_with_ssr(
                     "reason": "has_ssr_request is True and within max iterations",
                     "requested_keys": requested_keys,
                     "max_iterations": str(SSR_MAX_ITERATIONS),
+                    "class_selection": p_Request.classSelection or "",
+                    "lesson": p_Request.lesson or "",
+                    "action_plan": p_Request.actionPlan or "",
                 },
             )
 
@@ -550,6 +624,9 @@ def invoke_llm_with_ssr(
                     "loaded_status": loaded_status,
                     "content_loaded": content_loaded,
                     "requested_keys_count": str(len(requested_keys)),
+                    "class_selection": p_Request.classSelection or "",
+                    "lesson": p_Request.lesson or "",
+                    "action_plan": p_Request.actionPlan or "",
                 },
             )
 
@@ -576,7 +653,13 @@ def invoke_llm_with_ssr(
             ssr_state.conversation_truncated = True
             logger.info(
                 "Conversation exceeded maximum size",
-                extra={"user_conversation_size": str(user_conversation_size)},
+                extra={
+                    "session_key": p_sessionKey,
+                    "user_conversation_size": str(user_conversation_size),
+                    "class_selection": p_Request.classSelection or "",
+                    "lesson": p_Request.lesson or "",
+                    "action_plan": p_Request.actionPlan or "",
+                },
             )
             p_SessionCache.m_simpleCounterLLMConversation.prune_oldest_pair()
 
@@ -593,6 +676,9 @@ def invoke_llm_with_ssr(
                 "total_input_tokens": str(ssr_state.total_input_tokens),
                 "total_output_tokens": str(ssr_state.total_output_tokens),
                 "llm_response": extract_message_content(LLMResponse),
+                "class_selection": p_Request.classSelection or "",
+                "lesson": p_Request.lesson or "",
+                "action_plan": p_Request.actionPlan or "",
             },
         )
 
@@ -602,6 +688,12 @@ def invoke_llm_with_ssr(
         logger.error(
             "Exception occurred while calling LLM",
             exc_info=True,
-            extra={"session_key": p_sessionKey, "error": str(e)},
+            extra={
+                "session_key": p_sessionKey,
+                "error": str(e),
+                "class_selection": p_Request.classSelection if p_Request else "",
+                "lesson": p_Request.lesson if p_Request else "",
+                "action_plan": p_Request.actionPlan if p_Request else "",
+            },
         )
         return f"An error ({e}) occurred processing your request. Please try again."

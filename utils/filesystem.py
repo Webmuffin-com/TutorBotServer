@@ -38,13 +38,29 @@ def check_bucket_file_exists(file_path: str) -> bool:
 
         object_head = s3_client.head_object(Bucket=s3_bucket_name, Key=joined_path)
 
-        logger.info("S3 object head retrieved", extra={"object_head": str(object_head)})
+        logger.info(
+            "S3 object head retrieved",
+            extra={
+                "object_head": str(object_head),
+                "session_key": "",
+                "class_selection": "",
+                "lesson": "",
+                "action_plan": "",
+            },
+        )
 
         return True
     except Exception as e:
         logger.error(
             "Error checking S3 file existence",
-            extra={"error": str(e), "file_path": file_path},
+            extra={
+                "error": str(e),
+                "file_path": file_path,
+                "session_key": "",
+                "class_selection": "",
+                "lesson": "",
+                "action_plan": "",
+            },
         )
         return False
 
@@ -86,7 +102,14 @@ def check_bucket_directory_exists(directory_path: str) -> bool:
     except Exception as e:
         logger.error(
             "Error checking S3 directory existence",
-            extra={"error": str(e), "directory_path": directory_path},
+            extra={
+                "error": str(e),
+                "directory_path": directory_path,
+                "session_key": "",
+                "class_selection": "",
+                "lesson": "",
+                "action_plan": "",
+            },
         )
         return False
 
@@ -106,7 +129,16 @@ def open_text_file(file_path: str) -> Optional[str]:
     if cloud_mode_enabled:
         if not s3_client:
             error_message = "S3 client not initialized, cannot open file"
-            logger.error("S3 client not initialized", extra={"file_path": file_path})
+            logger.error(
+                "S3 client not initialized",
+                extra={
+                    "file_path": file_path,
+                    "session_key": "",
+                    "class_selection": "",
+                    "lesson": "",
+                    "action_plan": "",
+                },
+            )
             raise HTTPException(status_code=500, detail=error_message)
 
         joined_path = f"{assets_path}/{file_path}"
@@ -136,7 +168,16 @@ def save_file(file_path: str, content: bytes) -> Boolean:
     if cloud_mode_enabled:
         if not s3_client:
             error_message = "S3 client not initialized, cannot open file"
-            logger.error("S3 client not initialized", extra={"file_path": file_path})
+            logger.error(
+                "S3 client not initialized",
+                extra={
+                    "file_path": file_path,
+                    "session_key": "",
+                    "class_selection": "",
+                    "lesson": "",
+                    "action_plan": "",
+                },
+            )
             raise HTTPException(status_code=500, detail=error_message)
 
         joined_path = f"{assets_path}/{file_path}"
@@ -148,7 +189,14 @@ def save_file(file_path: str, content: bytes) -> Boolean:
         except Exception as e:
             logger.error(
                 "Error saving file to S3",
-                extra={"error": str(e), "file_path": file_path},
+                extra={
+                    "error": str(e),
+                    "file_path": file_path,
+                    "session_key": "",
+                    "class_selection": "",
+                    "lesson": "",
+                    "action_plan": "",
+                },
             )
             return False
 
@@ -159,7 +207,16 @@ def delete_file(file_path: str) -> Boolean:
     if cloud_mode_enabled:
         if not s3_client:
             error_message = "S3 client not initialized, cannot open file"
-            logger.error("S3 client not initialized", extra={"file_path": file_path})
+            logger.error(
+                "S3 client not initialized",
+                extra={
+                    "file_path": file_path,
+                    "session_key": "",
+                    "class_selection": "",
+                    "lesson": "",
+                    "action_plan": "",
+                },
+            )
             raise HTTPException(status_code=500, detail=error_message)
 
         joined_path = f"{assets_path}/{file_path}"
@@ -174,7 +231,14 @@ def delete_file(file_path: str) -> Boolean:
         except Exception as e:
             logger.error(
                 "Error deleting file from S3",
-                extra={"error": str(e), "file_path": file_path},
+                extra={
+                    "error": str(e),
+                    "file_path": file_path,
+                    "session_key": "",
+                    "class_selection": "",
+                    "lesson": "",
+                    "action_plan": "",
+                },
             )
             return False
 
@@ -214,7 +278,14 @@ def list_bucket_directory(directory_path: Optional[str], type: str) -> list:
     if not s3_client:
         error_message = "S3 client not initialized, cannot list directory"
         logger.error(
-            "S3 client not initialized", extra={"directory_path": str(directory_path)}
+            "S3 client not initialized",
+            extra={
+                "directory_path": str(directory_path),
+                "session_key": "",
+                "class_selection": "",
+                "lesson": "",
+                "action_plan": "",
+            },
         )
         raise HTTPException(status_code=500, detail=error_message)
 
@@ -245,7 +316,14 @@ def list_bucket_directory(directory_path: Optional[str], type: str) -> list:
     except Exception as e:
         logger.error(
             "Error listing S3 directory",
-            extra={"error": str(e), "directory_path": str(directory_path)},
+            extra={
+                "error": str(e),
+                "directory_path": str(directory_path),
+                "session_key": "",
+                "class_selection": "",
+                "lesson": "",
+                "action_plan": "",
+            },
         )
         return []
 

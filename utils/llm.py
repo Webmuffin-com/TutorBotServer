@@ -9,21 +9,38 @@ from utils.logger import get_logger
 logger = get_logger()
 
 
-def validate_access_key(access_key: str, session_key: str) -> bool:
+def validate_access_key(
+    access_key: str,
+    session_key: str,
+    class_selection: str = "",
+    lesson: str = "",
+    action_plan: str = "",
+) -> bool:
 
     available_keys = open_text_file("config/access_keys.txt")
 
     if available_keys is None:
         logger.error(
             "Access key file not found",
-            extra={"session_key": session_key},
+            extra={
+                "session_key": session_key,
+                "class_selection": class_selection,
+                "lesson": lesson,
+                "action_plan": action_plan,
+            },
         )
         return False
 
     if access_key not in available_keys.splitlines():
         logger.warning(
             "Invalid access key",
-            extra={"session_key": session_key, "access_key": access_key},
+            extra={
+                "session_key": session_key,
+                "access_key": access_key,
+                "class_selection": class_selection,
+                "lesson": lesson,
+                "action_plan": action_plan,
+            },
         )
         return False
 
@@ -31,7 +48,13 @@ def validate_access_key(access_key: str, session_key: str) -> bool:
 
 
 def get_llm_file(
-    class_directory: str, type: str, file_name: str, session_key: str
+    class_directory: str,
+    type: str,
+    file_name: str,
+    session_key: str,
+    class_selection: str = "",
+    lesson: str = "",
+    action_plan: str = "",
 ) -> str:
 
     if type:
@@ -42,19 +65,39 @@ def get_llm_file(
     if content is None:
         logger.warning(
             "Failed to locate file",
-            extra={"session_key": session_key, "file_name": file_name},
+            extra={
+                "session_key": session_key,
+                "file_name": file_name,
+                "class_selection": class_selection or class_directory,
+                "lesson": lesson,
+                "action_plan": action_plan,
+            },
         )
         return ""
 
     if len(content) == 0:
         logger.warning(
             "File is empty",
-            extra={"session_key": session_key, "type": type, "file_name": file_name},
+            extra={
+                "session_key": session_key,
+                "type": type,
+                "file_name": file_name,
+                "class_selection": class_selection or class_directory,
+                "lesson": lesson,
+                "action_plan": action_plan,
+            },
         )
     else:
         logger.info(
             "Loaded file",
-            extra={"session_key": session_key, "type": type, "file_name": file_name},
+            extra={
+                "session_key": session_key,
+                "type": type,
+                "file_name": file_name,
+                "class_selection": class_selection or class_directory,
+                "lesson": lesson,
+                "action_plan": action_plan,
+            },
         )
 
     return content

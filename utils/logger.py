@@ -1,8 +1,8 @@
+import json
 import logging
 import os
 import time
 import requests
-import json
 from typing import Optional, Tuple
 
 
@@ -68,10 +68,22 @@ class LokiHandler(logging.Handler):
 
     def emit(self, record: logging.LogRecord) -> None:
         try:
-            # 1) plain message text
-            text = record.getMessage()
-
-            # 2) flat "details"; properly serialize values
+            # 1) Extract fields that should be labels
+            label_fields = ["class_selection", "lesson", "action_plan"]
+            stream_labels = self.labels.copy()
+            
+            # Add dynamic labels from record
+            for field in label_fields:
+                value = getattr(record, field, "")
+                # Ensure value is a string
+                if value:
+                    # Convert to string and limit length
+                    str_value = str(value)
+                    stream_labels[field] = str_value[:1024] if len(str_value) > 1024 else str_value
+                else:
+                    stream_labels[field] = ""  # Empty string for missing values
+            
+            # 2) Build details dictionary for JSON log message
             ignored = {
                 "msg",
                 "args",
@@ -82,23 +94,41 @@ class LokiHandler(logging.Handler):
                 "levelno",
                 "name",
                 "taskName",
+                # Exclude fields that are now labels
+                "class_selection",
+                "lesson", 
+                "action_plan",
             }
             detail = {}
             for k, v in record.__dict__.items():
                 if k not in ignored and not k.startswith("_"):
                     if v is None:
                         continue
-                    elif isinstance(v, str):
+                    
+                    # Keep original field names and values for JSON
+                    if isinstance(v, (str, int, float, bool)):
+                        # Keep primitive types as-is for JSON
                         detail[k] = v
                     else:
-                        detail[k] = json.dumps(v)
+                        # Complex objects remain as-is for JSON serialization
+                        detail[k] = v
 
-            # 3) automatically add detected_level field
-            detail["detected_level"] = record.levelname.lower()
+            # 3) automatically add metadata fields
+            detail["level"] = record.levelname.lower()
+            detail["message"] = record.getMessage()
+            
+            # 4) ensure session_key is always present
+            if "session_key" not in detail:
+                detail["session_key"] = ""
 
-            value = [self._now_ns(), text, detail]
+            # 5) Create JSON log message with all details
+            log_json = json.dumps(detail)
+            
+            # 6) Loki value format: [timestamp, log_message]
+            value = [self._now_ns(), log_json]
 
-            payload = {"streams": [{"stream": self.labels, "values": [value]}]}
+            payload = {"streams": [{"stream": stream_labels, "values": [value]}]}
+
 
             # Prepare request parameters
             kwargs = {"json": payload, "timeout": self.timeout}
@@ -111,7 +141,8 @@ class LokiHandler(logging.Handler):
             if self.org_id:
                 kwargs["headers"] = {"X-Scope-OrgID": self.org_id}
 
-            requests.post(self.endpoint, **kwargs).raise_for_status()
+            response = requests.post(self.endpoint, **kwargs)
+            response.raise_for_status()
 
         except Exception:
             # swallow failures: logging must never crash the app

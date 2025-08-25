@@ -85,25 +85,70 @@ app.add_middleware(
 
 
 def startup_event():
-    logger.info("Application startup")
-    logger.info("Model configuration", extra={"model": model})
-    logger.info("Temperature configuration", extra={"temperature": str(temperature)})
+    logger.info(
+        "Application startup",
+        extra={"session_key": "", "class_selection": "", "lesson": "", "action_plan": ""},
+    )
+    logger.info(
+        "Model configuration",
+        extra={
+            "model": model,
+            "session_key": "",
+            "class_selection": "",
+            "lesson": "",
+            "action_plan": "",
+        },
+    )
+    logger.info(
+        "Temperature configuration",
+        extra={
+            "temperature": str(temperature),
+            "session_key": "",
+            "class_selection": "",
+            "lesson": "",
+            "action_plan": "",
+        },
+    )
     if top_p:
-        logger.info("Top P configuration", extra={"top_p": str(top_p)})
+        logger.info(
+            "Top P configuration",
+            extra={
+                "top_p": str(top_p),
+                "session_key": "",
+                "class_selection": "",
+                "lesson": "",
+                "action_plan": "",
+            },
+        )
     if frequency_penalty:
         logger.info(
             "Frequency Penalty configuration",
-            extra={"frequency_penalty": str(frequency_penalty)},
+            extra={
+                "frequency_penalty": str(frequency_penalty),
+                "session_key": "",
+                "class_selection": "",
+                "lesson": "",
+                "action_plan": "",
+            },
         )
     if presence_penalty:
         logger.info(
             "Presence Penalty configuration",
-            extra={"presence_penalty": str(presence_penalty)},
+            extra={
+                "presence_penalty": str(presence_penalty),
+                "session_key": "",
+                "class_selection": "",
+                "lesson": "",
+                "action_plan": "",
+            },
         )
 
 
 def shutdown_event():
-    logger.info("Application shutdown")
+    logger.info(
+        "Application shutdown",
+        extra={"session_key": "", "class_selection": "", "lesson": "", "action_plan": ""},
+    )
 
 
 app.add_event_handler("startup", lambda: startup_event())
@@ -146,12 +191,23 @@ async def check_session_key(request: Request, call_next):
 
         logger.info(
             "Session key in middleware",
-            extra={"session_key": session_key or "undefined"},
+            extra={
+                "session_key": session_key or "undefined",
+                "class_selection": "",
+                "lesson": "",
+                "action_plan": "",
+            },
         )
         if not session_key:
             logger.info(
                 "Session key missing in request",
-                extra={"request_path": request.url.path},
+                extra={
+                    "request_path": request.url.path,
+                    "session_key": "",
+                    "class_selection": "",
+                    "lesson": "",
+                    "action_plan": "",
+                },
             )
             raise HTTPException(status_code=401, detail="Session key is missing")
     response = await call_next(request)
@@ -177,13 +233,24 @@ async def set_cookie(
         )
         logger.info(
             "Cookie set and session created",
-            extra={"session_key": session_key},
+            extra={
+                "session_key": session_key,
+                "class_selection": "",
+                "lesson": "",
+                "action_plan": "",
+            },
         )
         return {"message": "Cookie set and session created"}
     except Exception as e:
         logger.error(
             "Exception caught in set_cookie",
-            extra={"session_key": session_key or "undefined", "error": str(e)},
+            extra={
+                "session_key": session_key or "undefined",
+                "error": str(e),
+                "class_selection": "",
+                "lesson": "",
+                "action_plan": "",
+            },
         )
         raise HTTPException(status_code=500, detail="Error in set_cookie")
 
@@ -203,20 +270,36 @@ def generate_response(p_session_key: str, p_Request: PyMessage) -> str:
             # logger already initialized globally
             logger.error(
                 "Session did not specify Conundrum",
-                extra={"session_key": p_session_key},
+                extra={
+                    "session_key": p_session_key,
+                    "class_selection": p_Request.classSelection or "",
+                    "lesson": p_Request.lesson or "",
+                    "action_plan": p_Request.actionPlan or "",
+                },
             )
             return "You must select a lesson to use this Bot"
         if not p_Request.lesson:
             # logger already initialized globally
             logger.error(
-                "Session did not specify Lesson", extra={"session_key": p_session_key}
+                "Session did not specify Lesson",
+                extra={
+                    "session_key": p_session_key,
+                    "class_selection": p_Request.classSelection or "",
+                    "lesson": p_Request.lesson or "",
+                    "action_plan": p_Request.actionPlan or "",
+                },
             )
             return "You must select a lesson to use this Bot"
         if not p_Request.actionPlan:
             # logger already initialized globally
             logger.error(
                 "Session did not specify Action Plan",
-                extra={"session_key": p_session_key},
+                extra={
+                    "session_key": p_session_key,
+                    "class_selection": p_Request.classSelection or "",
+                    "lesson": p_Request.lesson or "",
+                    "action_plan": p_Request.actionPlan or "",
+                },
             )
             return "You must select an action plan to use this Bot"
         return invoke_llm_with_ssr(sessionCache, p_Request, p_session_key)
@@ -224,7 +307,13 @@ def generate_response(p_session_key: str, p_Request: PyMessage) -> str:
         response = "Received unknown session key"
         logger.error(
             "Session key not found in generate_response",
-            extra={"session_key": p_session_key, "response": response},
+            extra={
+                "session_key": p_session_key,
+                "response": response,
+                "class_selection": "",
+                "lesson": "",
+                "action_plan": "",
+            },
         )
         return response
 
@@ -240,7 +329,13 @@ def chatbot_endpoint(request: Request, message: PyMessage) -> JSONResponse:
     if cloud_mode_enabled:
         access_key = message.accessKey
 
-        is_valid_key = validate_access_key(access_key, session_key)
+        is_valid_key = validate_access_key(
+            access_key,
+            session_key,
+            message.classSelection or "",
+            message.lesson or "",
+            message.actionPlan or "",
+        )
 
         if not is_valid_key:
             raise HTTPException(status_code=403, detail="Invalid access key")
@@ -248,7 +343,13 @@ def chatbot_endpoint(request: Request, message: PyMessage) -> JSONResponse:
             # logger already initialized globally
             logger.info(
                 "Session validated access key",
-                extra={"session_key": session_key, "access_key": access_key},
+                extra={
+                    "session_key": session_key,
+                    "access_key": access_key,
+                    "class_selection": message.classSelection or "",
+                    "lesson": message.lesson or "",
+                    "action_plan": message.actionPlan or "",
+                },
             )
 
     response_text = generate_response(session_key, message)
@@ -284,14 +385,26 @@ async def list_class_directories(request: Request):
 
         logger.info(
             "Loaded classes from directory",
-            extra={"session_key": session_key, "directories": str(directories)},
+            extra={
+                "session_key": session_key,
+                "directories": str(directories),
+                "class_selection": "",
+                "lesson": "",
+                "action_plan": "",
+            },
         )
 
         return JSONResponse(content={"directories": directories})
     except Exception as e:
         logger.error(
             "Error listing class directories",
-            extra={"session_key": session_key or "unknown", "error": str(e)},
+            extra={
+                "session_key": session_key or "unknown",
+                "error": str(e),
+                "class_selection": "",
+                "lesson": "",
+                "action_plan": "",
+            },
         )
         raise HTTPException(
             status_code=500,
@@ -328,7 +441,13 @@ async def get_class_configuration(class_directory: str, request: Request):
             # logger already initialized globally
             logger.error(
                 "Directory does not exist in class configuration",
-                extra={"session_key": session_key, "directory": non_existent_directory},
+                extra={
+                    "session_key": session_key,
+                    "directory": non_existent_directory,
+                    "class_selection": class_directory,
+                    "lesson": "",
+                    "action_plan": "",
+                },
             )
             raise HTTPException(status_code=404, detail=error_message)
 
@@ -355,6 +474,9 @@ async def get_class_configuration(class_directory: str, request: Request):
                 "class_directory": class_directory,
                 "lessons": str(lessons),
                 "action_plans": str(action_plans),
+                "class_selection": class_directory,
+                "lesson": "",
+                "action_plan": "",
             },
         )
 
@@ -368,6 +490,9 @@ async def get_class_configuration(class_directory: str, request: Request):
                 "session_key": session_key,
                 "class_directory": class_directory,
                 "error": str(e),
+                "class_selection": class_directory,
+                "lesson": "",
+                "action_plan": "",
             },
         )
         raise HTTPException(status_code=500, detail="Error listing files in directory")
@@ -427,7 +552,15 @@ async def send_conversation(request: Request, payload: dict):
             session_key, class_name, lesson, action_plan, session_cache
         )
 
-        logger.info("HTML created successfully for conversation email")
+        logger.info(
+            "HTML created successfully for conversation email",
+            extra={
+                "session_key": session_key,
+                "class_selection": class_name,
+                "lesson": lesson,
+                "action_plan": action_plan,
+            },
+        )
 
         with open("static/conversation-email-template.html", "r") as file:
             email_template = file.read()
@@ -442,13 +575,23 @@ async def send_conversation(request: Request, payload: dict):
                 "Conversation with TutorBot",
                 email_template,
                 [(filename, html_content)],  # type: ignore
+                session_key,
+                class_name,
+                lesson,
+                action_plan,
             )
 
             return JSONResponse(content={"message": "HTML created successfully"})
     except Exception as e:
         logger.error(
             "Error creating HTML for conversation email",
-            extra={"session_key": session_key, "error": str(e)},
+            extra={
+                "session_key": session_key,
+                "error": str(e),
+                "class_selection": class_name,
+                "lesson": lesson,
+                "action_plan": action_plan,
+            },
         )
         raise HTTPException(status_code=500, detail="Error creating HTML")
 
@@ -478,7 +621,15 @@ async def download_conversation(request: Request, payload: dict):
             session_key, class_name, lesson, action_plan, session_cache
         )
 
-        logger.info("HTML created successfully for conversation download")
+        logger.info(
+            "HTML created successfully for conversation download",
+            extra={
+                "session_key": session_key,
+                "class_selection": class_name or "",
+                "lesson": lesson or "",
+                "action_plan": action_plan or "",
+            },
+        )
 
         # Get filename
         filename = html_exporter.get_filename()
@@ -494,17 +645,29 @@ async def download_conversation(request: Request, payload: dict):
     except Exception as e:
         logger.error(
             "Error creating HTML for conversation download",
-            extra={"session_key": session_key, "error": str(e)},
+            extra={
+                "session_key": session_key,
+                "error": str(e),
+                "class_selection": class_name or "",
+                "lesson": lesson or "",
+                "action_plan": action_plan or "",
+            },
         )
         raise HTTPException(status_code=500, detail="Error creating HTML")
 
 
 if __name__ == "__main__":
     # Initialize logging system
-    logger.info("Logging setup configured and starting TutorBot_Server")
+    logger.info(
+        "Logging setup configured and starting TutorBot_Server",
+        extra={"session_key": "", "class_selection": "", "lesson": "", "action_plan": ""},
+    )
 
     # Validate SSR configuration
     validate_ssr_configuration()
-    logger.info("SSR configuration validation completed")
+    logger.info(
+        "SSR configuration validation completed",
+        extra={"session_key": "", "class_selection": "", "lesson": "", "action_plan": ""},
+    )
 
     uvicorn.run("TutorBot_Server:app", host="0.0.0.0", port=port)
