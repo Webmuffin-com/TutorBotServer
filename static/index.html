@@ -21,7 +21,16 @@
       <p>Select your class from the dropdown below and then select the lesson you would like to work on.</p>
       <div>
         <label style="font-weight: bold;" for="accessKey">Access Key:</label>
-        <input id="accessKey" autofocus name="accessKey" type="text" class="access-key-input" placeholder="Enter your access key" required>
+        <div style="position: relative; display: inline-block; margin: 0 0.5rem;">
+          <input id="accessKey" autofocus name="accessKey" type="password" class="access-key-input" placeholder="Enter your access key" required style="padding-right: 40px; margin: 0;">
+          <button id="toggleAccessKey" type="button" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; color: #666; display: flex; align-items: center; justify-content: center; height: calc(100% - 4px); margin: 0;" title="Show/Hide Access Key">
+            <svg id="eyeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <!-- Eye closed icon (default) -->
+              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+              <line x1="1" y1="1" x2="23" y2="23"></line>
+            </svg>
+          </button>
+        </div>
 
         <label for="classDropdown" style="font-weight: bold;">Class:</label>
         <select id="classDropdown">
@@ -589,6 +598,32 @@
     function addEventListeners() {
       document.getElementById('sendButton').addEventListener('click', sendMessage); // Event listener for the send button
       document.getElementById('copyButton').addEventListener('click', copyToClipboard);
+      
+      // Add event listener for access key toggle
+      document.getElementById('toggleAccessKey').addEventListener('click', function() {
+        const accessKeyInput = document.getElementById('accessKey');
+        const eyeIcon = document.getElementById('eyeIcon');
+        
+        if (accessKeyInput.type === 'password') {
+          // Show password
+          accessKeyInput.type = 'text';
+          // Change to eye open icon
+          eyeIcon.innerHTML = `
+            <!-- Eye open icon -->
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          `;
+        } else {
+          // Hide password
+          accessKeyInput.type = 'password';
+          // Change to eye closed icon
+          eyeIcon.innerHTML = `
+            <!-- Eye closed icon -->
+            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+            <line x1="1" y1="1" x2="23" y2="23"></line>
+          `;
+        }
+      });
 
       document.getElementById('userInput').addEventListener('keypress', function (event) {
         if (event.key === 'Enter' && !event.shiftKey) {
