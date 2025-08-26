@@ -89,7 +89,7 @@ def get_llm_file(
         )
     else:
         logger.info(
-            "Loaded file",
+            f"Loaded file ({file_name})",
             extra={
                 "session_key": session_key,
                 "type": type,

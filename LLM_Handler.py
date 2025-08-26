@@ -370,7 +370,7 @@ def get_token_count(
         output_tokens = usage.get("output_tokens", 0)
 
         logger.info(
-            "Token usage",
+            f"Token usage Input {input_tokens}, Output {output_tokens}",
             extra={
                 "session_key": p_sessionKey,
                 "input_tokens": str(input_tokens),
@@ -439,7 +439,7 @@ def invoke_llm_with_ssr(
         ssr_state = SSRIterationState()
 
         logger.info(
-            "Starting SSR processing loop",
+            "Starting processing loop",
             extra={
                 "session_key": p_sessionKey,
                 "max_iterations": str(SSR_MAX_ITERATIONS),
@@ -462,25 +462,32 @@ def invoke_llm_with_ssr(
                 ssr_state.loaded_content_message,
             )
 
-            logger.info(
-                "LLM REQUEST",
-                extra={
-                    "session_key": p_sessionKey,
-                    "iteration_count": str(ssr_state.iteration_count),
-                    "class_selection": p_Request.classSelection or "",
-                    "lesson": p_Request.lesson or "",
-                    "action_plan": p_Request.actionPlan or "",
-                },
-            )
-
             # transform tuples into json and dump as string
             parsed_messages = (
                 p_SessionCache.m_simpleCounterLLMConversation.get_serializable_conversation()
             )
 
+            # Turn list of tuples into a readable string
+            messages_str = "\n".join([f"{role.upper()}: {content}" for role, content in messages])
+
+            # Enforce 2 MB limit
+            MAX_LOG_SIZE = 2 * 1024 * 1024  # 2 MB
+            if len(messages_str) > MAX_LOG_SIZE:
+                messages_str = messages_str[:MAX_LOG_SIZE] + "... [TRUNCATED]"
+
             if ssr_state.iteration_count == 1:
                 logger.info(
-                    "USER_REQUEST",
+                    f"USER REQUEST :\n{p_Request.text}",
+                    extra={
+                        "session_key": p_sessionKey,
+                        "messages": parsed_messages,
+                        "class_selection": p_Request.classSelection or "",
+                        "lesson": p_Request.lesson or "",
+                        "action_plan": p_Request.actionPlan or "",
+                    },
+                )
+                logger.info(
+                    f"LLM REQUEST :\n{messages_str}",
                     extra={
                         "session_key": p_sessionKey,
                         "messages": parsed_messages,
@@ -491,7 +498,7 @@ def invoke_llm_with_ssr(
                 )
             else:
                 logger.info(
-                    "SSR_RESPONSE",
+                    f"LLM REQUEST REISSUED WITH SSR CONTENT :\n{p_Request.text} with additional content :\n{ssr_state.additional_content}",
                     extra={
                         "session_key": p_sessionKey,
                         "messages": parsed_messages,
@@ -520,16 +527,12 @@ def invoke_llm_with_ssr(
             )
 
             logger.info(
-                "SSR loop condition check",
+                f"LLM RESPONSE :\n{LLMMessage}",
                 extra={
                     "session_key": p_sessionKey,
-                    "iteration_count": str(ssr_state.iteration_count),
-                    "has_ssr_request": str(has_ssr_request),
-                    "requested_keys": requested_keys,
-                    "answer_text_present": str(bool(answer_text)),
-                    "loop_will_continue": str(
-                        has_ssr_request and not ssr_state.has_exceeded_max_iterations()
-                    ),
+                    "total_input_tokens": str(ssr_state.total_input_tokens),
+                    "total_output_tokens": str(ssr_state.total_output_tokens),
+                    "llm_response": extract_message_content(LLMResponse),
                     "class_selection": p_Request.classSelection or "",
                     "lesson": p_Request.lesson or "",
                     "action_plan": p_Request.actionPlan or "",
@@ -537,26 +540,39 @@ def invoke_llm_with_ssr(
             )
 
             if not has_ssr_request:
-                logger.info(
-                    "SSR loop terminating - no content request found",
-                    extra={
-                        "session_key": p_sessionKey,
-                        "iteration_count": str(ssr_state.iteration_count),
-                        "reason": "has_ssr_request is False",
-                        "has_answer_text": str(bool(answer_text)),
-                        "class_selection": p_Request.classSelection or "",
-                        "lesson": p_Request.lesson or "",
-                        "action_plan": p_Request.actionPlan or "",
-                    },
-                )
                 if answer_text:
-                    # SSR response without content request - return final answer
+                    # SSR  response without content request - return final answer
                     LLMMessage = format_token_usage_message(
                         ssr_state.total_input_tokens,
                         ssr_state.total_output_tokens,
                         ssr_state.iteration_count,
                     )
                     LLMMessage += answer_text
+                    logger.info(
+                        f"USER SSR PARTIAL RESPONSE :\n{LLMMessage}",
+                        extra={
+                            "session_key": p_sessionKey,
+                            "total_input_tokens": str(ssr_state.total_input_tokens),
+                            "total_output_tokens": str(ssr_state.total_output_tokens),
+                            "llm_response": extract_message_content(LLMResponse),
+                            "class_selection": p_Request.classSelection or "",
+                            "lesson": p_Request.lesson or "",
+                            "action_plan": p_Request.actionPlan or "",
+                        },
+                    )
+                else:
+                    logger.info(
+                        f"USER RESPONSE :\n{LLMMessage}",
+                        extra={
+                            "session_key": p_sessionKey,
+                            "total_input_tokens": str(ssr_state.total_input_tokens),
+                            "total_output_tokens": str(ssr_state.total_output_tokens),
+                            "llm_response": extract_message_content(LLMResponse),
+                            "class_selection": p_Request.classSelection or "",
+                            "lesson": p_Request.lesson or "",
+                            "action_plan": p_Request.actionPlan or "",
+                        },
+                    )
                 # No SSR processing needed - break out of loop
                 break
             # if more content is being requested and exceeded max iterations, use what you have.
@@ -591,7 +607,7 @@ def invoke_llm_with_ssr(
 
             # Log the reason the loop is continuing
             logger.info(
-                "SSR loop continuing - content request detected",
+                f"SSR loop continuing because content ({requested_keys}) requested",
                 extra={
                     "session_key": p_sessionKey,
                     "iteration_count": str(ssr_state.iteration_count),
@@ -614,20 +630,6 @@ def invoke_llm_with_ssr(
 
             content_loaded, loaded_status = content_loader.load_content_files(
                 p_Request, p_sessionKey, requested_keys
-            )
-
-            logger.info(
-                "SSR_RESPONSE and reissued request",
-                extra={
-                    "session_key": p_sessionKey,
-                    "iteration_count": str(ssr_state.iteration_count),
-                    "loaded_status": loaded_status,
-                    "content_loaded": content_loaded,
-                    "requested_keys_count": str(len(requested_keys)),
-                    "class_selection": p_Request.classSelection or "",
-                    "lesson": p_Request.lesson or "",
-                    "action_plan": p_Request.actionPlan or "",
-                },
             )
 
             ssr_state.additional_content += content_loaded
@@ -668,19 +670,6 @@ def invoke_llm_with_ssr(
                 "Old Conversations getting dropped.  Consider starting a new Conversation\n"
                 + LLMMessage
             )
-
-        logger.info(
-            "USER_RESPONSE",
-            extra={
-                "session_key": p_sessionKey,
-                "total_input_tokens": str(ssr_state.total_input_tokens),
-                "total_output_tokens": str(ssr_state.total_output_tokens),
-                "llm_response": extract_message_content(LLMResponse),
-                "class_selection": p_Request.classSelection or "",
-                "lesson": p_Request.lesson or "",
-                "action_plan": p_Request.actionPlan or "",
-            },
-        )
 
         return LLMMessage
 
