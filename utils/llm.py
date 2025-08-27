@@ -57,14 +57,18 @@ def get_llm_file(
     action_plan: str = "",
 ) -> str:
 
+    temp_name = ""
+
     if type:
         content = open_text_file(f"classes/{class_directory}/{type}/{file_name}")
+        temp_name              = f"classes/{class_directory}/{type}/{file_name}"
     else:
         content = open_text_file(f"classes/{class_directory}/{file_name}")
+        temp_name              = f"classes/{class_directory}/{file_name}"
 
     if content is None:
         logger.warning(
-            "Failed to locate file",
+            f"Failed to locate file ({temp_name})",
             extra={
                 "session_key": session_key,
                 "file_name": file_name,
@@ -77,7 +81,7 @@ def get_llm_file(
 
     if len(content) == 0:
         logger.warning(
-            "File is empty",
+            f"File ({temp_name}) is empty",
             extra={
                 "session_key": session_key,
                 "type": type,
@@ -89,7 +93,7 @@ def get_llm_file(
         )
     else:
         logger.info(
-            f"Loaded file ({file_name})",
+            f"Loaded file ({temp_name})",
             extra={
                 "session_key": session_key,
                 "type": type,
