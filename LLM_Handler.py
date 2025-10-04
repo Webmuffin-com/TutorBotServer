@@ -243,6 +243,9 @@ class SSRContentLoader:
                         "action_plan": request.actionPlan or "",
                     },
                 )
+                loaded_contents.append(f"<" + content_key + ">No Content by this name Exists</" + content_key + ">\n")
+                loaded_file_names.append(content_key)
+
                 continue
 
             content_size = len(content.encode("utf-8"))
@@ -251,7 +254,7 @@ class SSRContentLoader:
                 not loaded_contents
                 or running_size + content_size <= self.max_size_bytes
             ):
-                loaded_contents.append(content)
+                loaded_contents.append(f"<" + content_key + ">" + content + "</" + content_key + ">\n")
                 loaded_file_names.append(content_key)
                 running_size += content_size
             else:
@@ -457,11 +460,11 @@ def invoke_llm_with_ssr(
             TempAdditionalContent = ssr_state.additional_content
             current_time = time.strftime("%Y-%m-%d %H:%M:%S")
             temp_additional_content = (
-                    f"<CURRENT_DATE_TIME>{current_time}</CURRENT_DATE_TIME>"
+                    f"<CURRENT_DATE_TIME>{current_time}</CURRENT_DATE_TIME>\n"
                     + TempAdditionalContent
                     + "<PreviouslyRequested>"
                     + ", ".join(PreviouslyRequested)
-                    + "</PreviouslyRequested>"
+                    + "</PreviouslyRequested>\n"
             )
 
             messages = PromptBuilder.build_prompt(
