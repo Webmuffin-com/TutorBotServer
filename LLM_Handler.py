@@ -390,6 +390,7 @@ def invoke_llm_with_ssr(
 ) -> str:
     global LastResponse
     try:
+        PreviouslyRequested: List[str] = []
 
         # start by getting the various prompt components.
         # The p_Request contains the Lesson, Conundrum (Lesson), ActionPlan,
@@ -439,7 +440,7 @@ def invoke_llm_with_ssr(
         ssr_state = SSRIterationState()
 
         logger.info(
-            "Starting processing loop",
+            "Start LLM processing loop",
             extra={
                 "session_key": p_sessionKey,
                 "max_iterations": str(SSR_MAX_ITERATIONS),
@@ -452,10 +453,21 @@ def invoke_llm_with_ssr(
         while True:
             ssr_state.increment_iteration()
 
+            import time
+            TempAdditionalContent = ssr_state.additional_content
+            current_time = time.strftime("%Y-%m-%d %H:%M:%S")
+            temp_additional_content = (
+                    f"<CURRENT_DATE_TIME>{current_time}</CURRENT_DATE_TIME>"
+                    + TempAdditionalContent
+                    + "<PreviouslyRequested>"
+                    + ", ".join(PreviouslyRequested)
+                    + "</PreviouslyRequested>"
+            )
+
             messages = PromptBuilder.build_prompt(
                 scenario,
                 conundrum,
-                ssr_state.additional_content,
+                temp_additional_content,
                 conversation_history,
                 p_Request.text,
                 actionPlan,
@@ -477,17 +489,7 @@ def invoke_llm_with_ssr(
 
             if ssr_state.iteration_count == 1:
                 logger.info(
-                    f"USER REQUEST :\n{p_Request.text}",
-                    extra={
-                        "session_key": p_sessionKey,
-                        "messages": parsed_messages,
-                        "class_selection": p_Request.classSelection or "",
-                        "lesson": p_Request.lesson or "",
-                        "action_plan": p_Request.actionPlan or "",
-                    },
-                )
-                logger.info(
-                    f"LLM REQUEST :\n{messages_str}",
+                    f"USER REQUEST :({p_Request.text}).  LLM REQUEST : \n{messages_str}",
                     extra={
                         "session_key": p_sessionKey,
                         "messages": parsed_messages,
@@ -498,7 +500,7 @@ def invoke_llm_with_ssr(
                 )
             else:
                 logger.info(
-                    f"LLM REQUEST REISSUED WITH SSR CONTENT :\n{p_Request.text} with additional content :\n{ssr_state.additional_content}",
+                    f"SSR REQUEST : ({p_Request.text})\nLLM REQUEST :({messages_str})",
                     extra={
                         "session_key": p_sessionKey,
                         "messages": parsed_messages,
@@ -526,6 +528,9 @@ def invoke_llm_with_ssr(
                 response_content
             )
 
+            if requested_keys:
+                PreviouslyRequested.extend(requested_keys)
+
             logger.info(
                 f"LLM RESPONSE :\n{LLMMessage}",
                 extra={
@@ -549,7 +554,7 @@ def invoke_llm_with_ssr(
                     )
                     LLMMessage += answer_text
                     logger.info(
-                        f"USER SSR PARTIAL RESPONSE :\n{LLMMessage}",
+                        f"SSR USER RESPONSE : ({LLMMessage})",
                         extra={
                             "session_key": p_sessionKey,
                             "total_input_tokens": str(ssr_state.total_input_tokens),
