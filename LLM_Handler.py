@@ -417,7 +417,7 @@ def _create_llm_instance(provider: str, model_name: str) -> BaseChatModel:
                 # Gemini 3+ models cannot fully disable thinking; "low" is the
                 # minimum on Pro models ("minimal" exists only on Flash).
                 # Defaults to "high" when unset.
-                thinking_level="low",
+                # thinking_level="low",  DISABLED for this model
             )
         case "ANTHROPIC":
             from langchain_anthropic import ChatAnthropic
