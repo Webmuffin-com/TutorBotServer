@@ -537,8 +537,6 @@ def invoke_llm_with_ssr(
             "user", RequestText, RequestText
         )
 
-        SSR_CONTENT_REQUESTED_DURING_THIS_SSR_LOOP: List[str] = []
-
         # start by getting the various prompt components.
         # The p_Request contains the Lesson, Conundrum (Lesson), ActionPlan,
         scenario = (
@@ -609,9 +607,6 @@ def invoke_llm_with_ssr(
             temp_additional_content = (
                 f"<CURRENT_DATE_TIME>{current_time}</CURRENT_DATE_TIME>\n"
                 + TempAdditionalContent
-                + "<SSR_CONTENT_REQUESTED_DURING_THIS_SSR_LOOP>"
-                + ", ".join(SSR_CONTENT_REQUESTED_DURING_THIS_SSR_LOOP)
-                + "</SSR_CONTENT_REQUESTED_DURING_THIS_SSR_LOOP>\n"
             )
 
             messages = PromptBuilder.build_prompt(
@@ -696,9 +691,6 @@ def invoke_llm_with_ssr(
                 response_text
             )
 
-            if requested_keys:
-                SSR_CONTENT_REQUESTED_DURING_THIS_SSR_LOOP.extend(requested_keys)
-
             logger.info(
                 f"LLM RESPONSE :\n{response_text}",
                 extra={
@@ -735,7 +727,7 @@ def invoke_llm_with_ssr(
                             "model": effective_model,
                             "total_input_tokens": str(ssr_state.total_input_tokens),
                             "total_output_tokens": str(ssr_state.total_output_tokens),
-                            "llm_response": response_text,
+                            "llm_response": user_facing_message,
                             "class_selection": p_Request.classSelection or "",
                             "lesson": p_Request.lesson or "",
                             "action_plan": p_Request.actionPlan or "",
@@ -827,13 +819,6 @@ def invoke_llm_with_ssr(
                     p_Request, p_sessionKey, requested_keys, redacted_access_key
                 )
             )
-            # if these keys failed to load, remove them from the memory of that event.
-            if failed_keys:
-                SSR_CONTENT_REQUESTED_DURING_THIS_SSR_LOOP = [
-                    key
-                    for key in SSR_CONTENT_REQUESTED_DURING_THIS_SSR_LOOP
-                    if key not in failed_keys
-                ]
 
             ssr_state.additional_content = content_loaded
             ssr_state.loaded_content_message = loaded_status
